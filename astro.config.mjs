@@ -11,7 +11,7 @@ import { defineConfig } from 'astro/config';
 //  - リポジトリ名を変えた場合は `base` を合わせて変更してください。
 // ─────────────────────────────────────────────────────────
 export default defineConfig({
-  site: 'https://example.github.io',
+  site: 'https://mayotesoh.github.io',
   base: '/Branch-site',
   output: 'static',
 });
