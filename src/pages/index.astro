@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import LineButton from '../components/LineButton.astro';
 
 const base = import.meta.env.BASE_URL;
 const joinUrl = `${base.replace(/\/$/, '')}/join`;
@@ -47,7 +48,7 @@ const steps = [
         基礎から実践、そして集客・活動の広げ方まで、仲間とともに一歩ずつ。
       </p>
       <div class="hero-actions">
-        <a class="btn btn-primary" href={joinUrl}>コミュニティに参加する</a>
+        <LineButton label="LINEで予約・参加する" />
         <a class="btn btn-ghost" href="#about">Branchについて知る</a>
       </div>
     </div>
@@ -114,7 +115,10 @@ const steps = [
     <div class="container cta-inner">
       <h2>あなたの占いを、次のステージへ。</h2>
       <p>Branchで仲間と学び、占い師としての一歩を踏み出しましょう。</p>
-      <a class="btn btn-primary" href={joinUrl}>参加方法を見る</a>
+      <div class="cta-actions">
+        <LineButton label="LINEで予約・参加する" />
+        <a class="btn btn-ghost" href={joinUrl}>参加方法を見る</a>
+      </div>
     </div>
   </section>
 </Layout>
@@ -225,5 +229,11 @@ const steps = [
   .cta-inner p {
     color: var(--color-text-muted);
     margin-bottom: 2rem;
+  }
+  .cta-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 </style>

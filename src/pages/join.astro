@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import LineButton from '../components/LineButton.astro';
 ---
 
 <Layout title="参加する｜Branch" description="Branchコミュニティへの参加方法をご案内します。">
@@ -7,8 +8,17 @@ import Layout from '../layouts/Layout.astro';
     <div class="container narrow">
       <h1 class="page-title">コミュニティに参加する</h1>
       <p class="page-lead">
-        Branchは現在準備中です。参加方法や募集の開始は、このページでお知らせします。
+        ご予約・ご参加・お問い合わせは、公式LINEから受け付けています。<br />
+        まずは友だち追加して、お気軽にメッセージをお送りください。
       </p>
+
+      <div class="line-cta">
+        <p class="line-cta-title">📅 ご予約・ご参加はこちらから</p>
+        <p class="line-cta-desc">
+          下のボタンから公式LINEを友だち追加 → トークで日時をお送りいただくだけ。
+        </p>
+        <LineButton label="LINEで友だち追加して予約する" />
+      </div>
 
       <div class="join-card">
         <h2>こんな方を歓迎します</h2>
@@ -32,6 +42,11 @@ import Layout from '../layouts/Layout.astro';
       <p class="note">
         ※ 募集要項・費用などの詳細は確定次第このページに掲載します。
       </p>
+
+      <div class="line-cta line-cta-bottom">
+        <p class="line-cta-desc">ご不明な点は、公式LINEでお気軽にご相談ください。</p>
+        <LineButton />
+      </div>
     </div>
   </section>
 </Layout>
@@ -71,5 +86,28 @@ import Layout from '../layouts/Layout.astro';
     color: var(--color-text-muted);
     font-size: 0.9rem;
     margin-top: 1.5rem;
+  }
+
+  .line-cta {
+    text-align: center;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem;
+    margin-bottom: 2.5rem;
+  }
+  .line-cta-bottom {
+    margin-top: 2.5rem;
+    margin-bottom: 0;
+  }
+  .line-cta-title {
+    font-weight: 700;
+    font-size: 1.15rem;
+    margin-bottom: 0.5rem;
+  }
+  .line-cta-desc {
+    color: var(--color-text-muted);
+    font-size: 0.92rem;
+    margin-bottom: 1.3rem;
   }
 </style>
