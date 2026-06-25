@@ -34,6 +34,14 @@ npm run preview    # ビルド結果をローカルで確認
 └── .github/workflows/     # GitHub Actions（デプロイ）
 ```
 
+## ドキュメント
+
+| ドキュメント | 内容 |
+| --- | --- |
+| [予約システム仕様書](docs/予約システム仕様書.md) | 構成・データ仕様・API・LINE対話フロー |
+| [使用マニュアル](docs/使用マニュアル.md) | 予約方法・運営手順・トラブルシューティング |
+| [GAS README](gas/README.md) | Apps Script のセットアップ手順 |
+
 ## GitHub Pages へのデプロイ
 
 1. このリポジトリを GitHub に push します。
