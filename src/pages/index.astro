@@ -1,0 +1,229 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const base = import.meta.env.BASE_URL;
+const joinUrl = `${base.replace(/\/$/, '')}/join`;
+
+const features = [
+  {
+    icon: '🔮',
+    title: '占術の基礎を学ぶ',
+    desc: 'タロット・西洋占星術・東洋占術など、各占術の基礎から体系的に学べる学習コンテンツを用意します。',
+  },
+  {
+    icon: '🗣️',
+    title: 'リーディング実践',
+    desc: '実際の鑑定を想定したロールプレイや相互練習で、伝える力・聴く力を磨きます。',
+  },
+  {
+    icon: '🌱',
+    title: '活動の広げ方',
+    desc: '集客・料金設定・SNS発信・対面/オンライン鑑定など、占い師として活動するノウハウを共有します。',
+  },
+  {
+    icon: '🤝',
+    title: '仲間とのつながり',
+    desc: '同じ志を持つ仲間と悩みを相談し合い、互いに高め合えるコミュニティです。',
+  },
+];
+
+const steps = [
+  { no: '01', title: '学ぶ', desc: '基礎講座とアーカイブで自分のペースでインプット。' },
+  { no: '02', title: '練習する', desc: '仲間と鑑定を練習し、フィードバックをもらう。' },
+  { no: '03', title: '活動する', desc: '学びを実践に変え、占い師として一歩を踏み出す。' },
+];
+---
+
+<Layout>
+  <!-- Hero -->
+  <section class="hero">
+    <div class="container hero-inner">
+      <p class="hero-eyebrow">占い師のための教育コミュニティ</p>
+      <h1 class="hero-title">
+        Branch ─<br />稼げる占い師を育成する場所。
+      </h1>
+      <p class="hero-lead">
+        Branch（ブランチ）は、占いを「仕事」にして稼げる占い師を育てる教育コミュニティです。<br />
+        基礎から実践、そして集客・活動の広げ方まで、仲間とともに一歩ずつ。
+      </p>
+      <div class="hero-actions">
+        <a class="btn btn-primary" href={joinUrl}>コミュニティに参加する</a>
+        <a class="btn btn-ghost" href="#about">Branchについて知る</a>
+      </div>
+    </div>
+  </section>
+
+  <!-- About -->
+  <section id="about" class="section">
+    <div class="container">
+      <h2 class="section-title">Branch とは</h2>
+      <p class="section-lead">「枝（Branch）」のように、一人ひとりの可能性を伸ばすコミュニティ</p>
+      <div class="about-grid">
+        <p>
+          占いを学びたい、もっと上手くなりたい、いつか占い師として活動したい。
+          そんな想いを持つ人が集まり、安心して学び合える場所をつくりました。
+        </p>
+        <p>
+          一人で続けるのは難しくても、仲間がいれば前に進めます。
+          Branchは知識のインプットだけでなく、実践・相談・つながりまでを大切にする教育コミュニティです。
+        </p>
+      </div>
+    </div>
+  </section>
+
+  <!-- Features -->
+  <section id="features" class="section section-alt">
+    <div class="container">
+      <h2 class="section-title">学べること</h2>
+      <p class="section-lead">基礎から実践、活動まで。占い師に必要な学びがそろう。</p>
+      <div class="feature-grid">
+        {
+          features.map((f) => (
+            <article class="card">
+              <span class="card-icon">{f.icon}</span>
+              <h3>{f.title}</h3>
+              <p>{f.desc}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- Steps -->
+  <section id="community" class="section">
+    <div class="container">
+      <h2 class="section-title">学びの流れ</h2>
+      <p class="section-lead">あなたのペースで、3つのステップ</p>
+      <div class="step-grid">
+        {
+          steps.map((s) => (
+            <article class="step">
+              <span class="step-no">{s.no}</span>
+              <h3>{s.title}</h3>
+              <p>{s.desc}</p>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="cta">
+    <div class="container cta-inner">
+      <h2>あなたの占いを、次のステージへ。</h2>
+      <p>Branchで仲間と学び、占い師としての一歩を踏み出しましょう。</p>
+      <a class="btn btn-primary" href={joinUrl}>参加方法を見る</a>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .hero {
+    padding-block: 6rem 5rem;
+    text-align: center;
+  }
+  .hero-eyebrow {
+    color: var(--color-accent);
+    letter-spacing: 0.2em;
+    font-size: 0.85rem;
+    margin-bottom: 1.2rem;
+  }
+  .hero-title {
+    font-size: clamp(2rem, 6vw, 3.4rem);
+    margin-bottom: 1.5rem;
+  }
+  .hero-lead {
+    color: var(--color-text-muted);
+    max-width: 640px;
+    margin-inline: auto;
+    margin-bottom: 2.5rem;
+  }
+  .hero-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .section-alt {
+    background: var(--color-bg-soft);
+    border-block: 1px solid var(--color-border);
+  }
+
+  .about-grid {
+    display: grid;
+    gap: 1.5rem;
+    max-width: 760px;
+    margin-inline: auto;
+    color: var(--color-text-muted);
+  }
+
+  .feature-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(230px, 1fr));
+    gap: 1.5rem;
+  }
+  .card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1.8rem;
+    transition: transform 0.2s ease, border-color 0.2s ease;
+  }
+  .card:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-primary);
+  }
+  .card-icon {
+    font-size: 2rem;
+    display: block;
+    margin-bottom: 0.8rem;
+  }
+  .card h3 {
+    margin-bottom: 0.6rem;
+    font-size: 1.15rem;
+  }
+  .card p {
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+  }
+
+  .step-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 1.5rem;
+  }
+  .step {
+    text-align: center;
+    padding: 1.5rem;
+  }
+  .step-no {
+    font-family: var(--font-serif);
+    font-size: 2.4rem;
+    color: var(--color-accent);
+    display: block;
+    margin-bottom: 0.5rem;
+  }
+  .step h3 {
+    margin-bottom: 0.5rem;
+  }
+  .step p {
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+  }
+
+  .cta {
+    padding-block: 5rem;
+    text-align: center;
+  }
+  .cta-inner h2 {
+    font-size: clamp(1.6rem, 4vw, 2.4rem);
+    margin-bottom: 1rem;
+  }
+  .cta-inner p {
+    color: var(--color-text-muted);
+    margin-bottom: 2rem;
+  }
+</style>

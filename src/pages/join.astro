@@ -1,0 +1,75 @@
+---
+import Layout from '../layouts/Layout.astro';
+---
+
+<Layout title="参加する｜Branch" description="Branchコミュニティへの参加方法をご案内します。">
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="page-title">コミュニティに参加する</h1>
+      <p class="page-lead">
+        Branchは現在準備中です。参加方法や募集の開始は、このページでお知らせします。
+      </p>
+
+      <div class="join-card">
+        <h2>こんな方を歓迎します</h2>
+        <ul>
+          <li>占いをこれから学びたい初心者の方</li>
+          <li>すでに学んでいて、もっと上達したい方</li>
+          <li>占い師として活動したい・活動中の方</li>
+          <li>同じ志を持つ仲間とつながりたい方</li>
+        </ul>
+      </div>
+
+      <div class="join-card">
+        <h2>参加の流れ（予定）</h2>
+        <ol>
+          <li>募集開始のお知らせを確認</li>
+          <li>申し込みフォームから登録</li>
+          <li>コミュニティへ参加し、学びをスタート</li>
+        </ol>
+      </div>
+
+      <p class="note">
+        ※ 募集要項・費用などの詳細は確定次第このページに掲載します。
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .narrow {
+    max-width: 720px;
+  }
+  .page-title {
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    margin-bottom: 1rem;
+  }
+  .page-lead {
+    color: var(--color-text-muted);
+    margin-bottom: 3rem;
+  }
+  .join-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1.8rem 2rem;
+    margin-bottom: 1.5rem;
+  }
+  .join-card h2 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: var(--color-accent-soft);
+  }
+  .join-card ul,
+  .join-card ol {
+    padding-left: 1.3rem;
+    color: var(--color-text-muted);
+    display: grid;
+    gap: 0.5rem;
+  }
+  .note {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    margin-top: 1.5rem;
+  }
+</style>

@@ -1,0 +1,174 @@
+---
+import Layout from '../layouts/Layout.astro';
+
+const base = import.meta.env.BASE_URL;
+const asset = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+
+const instructors = [
+  {
+    name: '春名 渼月',
+    kana: 'はるな みづき',
+    image: asset('sibusawa.webp'),
+    catch: '誰もが持つ天からの宿命！！',
+    role: '乗り越える術を伝達する占い師',
+    tag: '理論派占い師＆当たる占い師養成講師',
+    arts: [
+      '紫微斗数',
+      '西洋占星術',
+      'タロット',
+      'チャネリング',
+      '九星気学',
+      '手相',
+      'カラー占術',
+    ],
+  },
+  {
+    name: '多喜 渼春',
+    kana: 'たき みはる',
+    image: asset('harutyan.webp'),
+    catch: 'あなたのハートをしっかりキャッチ！！',
+    role: '心から笑顔にさせる霊視鑑定師',
+    tag: '感覚派占い師＆当たる占い師養成講師',
+    arts: [
+      '霊視',
+      '透視',
+      '数秘術',
+      '前世鑑定',
+      '来世鑑定',
+      '守護霊鑑定',
+      'タロット',
+      'ルノルマン',
+      'オラクル',
+      '姓名判断',
+    ],
+  },
+];
+---
+
+<Layout
+  title="講師紹介｜Branch"
+  description="Branchで学べる、占い師養成講師の紹介ページです。"
+>
+  <section class="section">
+    <div class="container">
+      <h1 class="section-title">講師紹介</h1>
+      <p class="section-lead">あなたの学びを導く、2人の養成講師</p>
+
+      <div class="instructor-list">
+        {
+          instructors.map((t) => (
+            <article class="instructor">
+              <div class="photo">
+                <img src={t.image} alt={`${t.name}の写真`} loading="lazy" />
+              </div>
+              <div class="profile">
+                <p class="catch">{t.catch}</p>
+                <h2 class="name">
+                  {t.name}
+                  <span class="kana">{t.kana}</span>
+                </h2>
+                <p class="role">{t.role}</p>
+                <p class="tag">{t.tag}</p>
+
+                <h3 class="arts-title">主な占術</h3>
+                <ul class="arts">
+                  {t.arts.map((a) => (
+                    <li>{a}</li>
+                  ))}
+                </ul>
+              </div>
+            </article>
+          ))
+        }
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .instructor-list {
+    display: grid;
+    gap: 2.5rem;
+    max-width: 880px;
+    margin-inline: auto;
+  }
+  .instructor {
+    display: grid;
+    grid-template-columns: 260px 1fr;
+    gap: 2rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    align-items: start;
+  }
+  .photo img {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    object-fit: cover;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    display: block;
+  }
+  .catch {
+    color: var(--color-accent);
+    font-weight: 600;
+    margin-bottom: 0.5rem;
+  }
+  .name {
+    font-size: 1.6rem;
+    margin-bottom: 0.4rem;
+    display: flex;
+    align-items: baseline;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+  }
+  .kana {
+    font-family: var(--font-sans);
+    font-size: 0.9rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+  }
+  .role {
+    color: var(--color-primary-soft);
+    margin-bottom: 0.3rem;
+  }
+  .tag {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+  .arts-title {
+    font-size: 1.05rem;
+    color: var(--color-accent-soft);
+    margin-bottom: 0.8rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .arts {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .arts li {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.3rem 0.9rem;
+    font-size: 0.85rem;
+    color: var(--color-text);
+  }
+
+  @media (max-width: 680px) {
+    .instructor {
+      grid-template-columns: 1fr;
+      gap: 1.5rem;
+      padding: 1.5rem;
+    }
+    .photo {
+      max-width: 220px;
+      margin-inline: auto;
+    }
+  }
+</style>

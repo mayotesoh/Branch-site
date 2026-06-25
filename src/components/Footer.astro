@@ -1,0 +1,66 @@
+---
+const year = new Date().getFullYear();
+const base = import.meta.env.BASE_URL;
+---
+
+<footer class="site-footer">
+  <div class="container footer-inner">
+    <div class="footer-brand">
+      <span class="brand-mark">✦</span> Branch
+      <p class="footer-tagline">占い師のための学びと出会いのコミュニティ</p>
+    </div>
+    <nav class="footer-nav">
+      <a href={`${base.replace(/\/$/, '')}/#about`}>Branchとは</a>
+      <a href={`${base.replace(/\/$/, '')}/#features`}>学べること</a>
+      <a href={`${base.replace(/\/$/, '')}/join`}>参加する</a>
+    </nav>
+  </div>
+  <div class="container footer-bottom">
+    <small>&copy; {year} Branch. All rights reserved.</small>
+  </div>
+</footer>
+
+<style>
+  .site-footer {
+    border-top: 1px solid var(--color-border);
+    background: var(--color-bg-soft);
+    padding-block: 3rem 1.5rem;
+    margin-top: 4rem;
+  }
+  .footer-inner {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 2rem;
+    justify-content: space-between;
+  }
+  .footer-brand {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    font-weight: 700;
+    letter-spacing: 0.08em;
+  }
+  .brand-mark {
+    color: var(--color-accent);
+  }
+  .footer-tagline {
+    font-family: var(--font-sans);
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    margin-top: 0.4rem;
+  }
+  .footer-nav {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+  }
+  .footer-nav a {
+    color: var(--color-text-muted);
+  }
+  .footer-bottom {
+    margin-top: 2rem;
+    text-align: center;
+    color: var(--color-text-muted);
+  }
+</style>

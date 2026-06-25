@@ -1,0 +1,13 @@
+{
+  "permissions": {
+    "allow": [
+      "PowerShell(npm *)",
+      "PowerShell($ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri \"http://localhost:4321/Branch-site/instructors\" -UseBasicParsing -TimeoutSec 10; \"STATUS: $\\($r.StatusCode\\)\"; \"春名 present: $\\($r.Content -match '春名'\\)\"; \"多喜 present: $\\($r.Content -match '多喜'\\)\"; \"img present: $\\($r.Content -match 'sibusawa.webp'\\)\" } catch { \"ERROR: $_\" })",
+      "PowerShell($ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri \"http://localhost:4321/Branch-site/\" -UseBasicParsing -TimeoutSec 10; \"STATUS: $\\($r.StatusCode\\)\"; \"稼げる copy present: $\\($r.Content -match '稼げる'\\)\" } catch { \"ERROR: $_\" })",
+      "PowerShell($ProgressPreference='SilentlyContinue'; try { $r = Invoke-WebRequest -Uri \"http://localhost:4321/Branch-site/courses\" -UseBasicParsing -TimeoutSec 10; $utf8 = [System.Text.Encoding]::UTF8.GetString\\($r.RawContentStream.ToArray\\(\\)\\); \"STATUS: $\\($r.StatusCode\\)\"; \"course-card count: \" + \\([regex]::Matches\\($utf8,'course-card'\\)\\).Count } catch { \"ERROR: $_\" })",
+      "mcp__claude_ai_Google_Drive__read_file_content",
+      "PowerShell(gh auth *)",
+      "PowerShell(git *)"
+    ]
+  }
+}

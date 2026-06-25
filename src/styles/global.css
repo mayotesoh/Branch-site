@@ -1,0 +1,116 @@
+:root {
+  /* カラーパレット ─ 若葉のような優しい緑 × ゴールド */
+  --color-bg: #f7faf2;
+  --color-bg-soft: #eef4e5;
+  --color-surface: #ffffff;
+  --color-border: #dde8cd;
+  --color-text: #2c3a23;
+  --color-text-muted: #66785a;
+  --color-accent: #c2a14a;
+  --color-accent-soft: #a07f2e;
+  --color-primary: #6fa845;
+  --color-primary-soft: #5b9135;
+
+  --font-sans: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
+    "Meiryo", system-ui, sans-serif;
+  --font-serif: "Hiragino Mincho ProN", "Yu Mincho", "Noto Serif JP", serif;
+
+  --maxw: 1080px;
+  --radius: 14px;
+  --shadow: 0 8px 30px rgba(0, 0, 0, 0.35);
+}
+
+* {
+  box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  font-family: var(--font-sans);
+  background: var(--color-bg);
+  color: var(--color-text);
+  line-height: 1.8;
+  -webkit-font-smoothing: antialiased;
+  background-image: radial-gradient(
+      circle at 15% 10%,
+      rgba(111, 168, 69, 0.16),
+      transparent 42%
+    ),
+    radial-gradient(circle at 85% 30%, rgba(194, 161, 74, 0.1), transparent 45%);
+  background-attachment: fixed;
+}
+
+a {
+  color: var(--color-primary-soft);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+
+a:hover {
+  color: var(--color-accent-soft);
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--font-serif);
+  line-height: 1.4;
+  font-weight: 600;
+}
+
+.container {
+  width: 100%;
+  max-width: var(--maxw);
+  margin-inline: auto;
+  padding-inline: 1.25rem;
+}
+
+.section {
+  padding-block: 5rem;
+}
+
+.section-title {
+  font-size: clamp(1.6rem, 4vw, 2.2rem);
+  text-align: center;
+  margin-bottom: 0.75rem;
+}
+
+.section-lead {
+  text-align: center;
+  color: var(--color-text-muted);
+  margin-bottom: 3rem;
+}
+
+.btn {
+  display: inline-block;
+  padding: 0.85rem 1.8rem;
+  border-radius: 999px;
+  font-weight: 600;
+  transition: transform 0.15s ease, box-shadow 0.2s ease;
+}
+
+.btn-primary {
+  background: linear-gradient(135deg, var(--color-primary-soft), var(--color-primary));
+  color: #ffffff;
+}
+
+.btn-primary:hover {
+  color: #ffffff;
+  transform: translateY(-2px);
+  box-shadow: 0 10px 24px rgba(91, 145, 53, 0.32);
+}
+
+.btn-ghost {
+  border: 1px solid var(--color-border);
+  color: var(--color-text);
+}
+
+.btn-ghost:hover {
+  border-color: var(--color-primary);
+  color: var(--color-primary-soft);
+}

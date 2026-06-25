@@ -1,0 +1,78 @@
+---
+const base = import.meta.env.BASE_URL;
+const withBase = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+
+const links = [
+  { href: withBase('/#about'), label: 'Branchとは' },
+  { href: withBase('/#features'), label: '学べること' },
+  { href: withBase('/courses'), label: '講座紹介' },
+  { href: withBase('/instructors'), label: '講師紹介' },
+  { href: withBase('/#community'), label: 'コミュニティ' },
+  { href: withBase('/join'), label: '参加する' },
+];
+---
+
+<header class="site-header">
+  <div class="container header-inner">
+    <a class="brand" href={base}>
+      <span class="brand-mark">✦</span>
+      <span class="brand-name">Branch</span>
+    </a>
+    <nav class="nav">
+      {links.map((l) => <a href={l.href}>{l.label}</a>)}
+    </nav>
+  </div>
+</header>
+
+<style>
+  .site-header {
+    position: sticky;
+    top: 0;
+    z-index: 50;
+    backdrop-filter: blur(10px);
+    background: rgba(247, 250, 242, 0.82);
+    border-bottom: 1px solid var(--color-border);
+  }
+  .header-inner {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    height: 64px;
+  }
+  .brand {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-family: var(--font-serif);
+    font-size: 1.3rem;
+    font-weight: 700;
+    color: var(--color-text);
+    letter-spacing: 0.08em;
+  }
+  .brand:hover {
+    color: var(--color-text);
+  }
+  .brand-mark {
+    color: var(--color-accent);
+  }
+  .nav {
+    display: flex;
+    gap: 1.5rem;
+    font-size: 0.92rem;
+  }
+  .nav a {
+    color: var(--color-text-muted);
+  }
+  .nav a:hover {
+    color: var(--color-accent-soft);
+  }
+  @media (max-width: 640px) {
+    .nav {
+      gap: 0.9rem;
+      font-size: 0.8rem;
+    }
+    .brand-name {
+      display: none;
+    }
+  }
+</style>
