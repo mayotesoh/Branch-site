@@ -1,6 +1,8 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import LineButton from '../components/LineButton.astro';
+
+const base = import.meta.env.BASE_URL;
 ---
 
 <Layout title="参加する｜Branch" description="Branchコミュニティへの参加方法をご案内します。">
@@ -15,9 +17,12 @@ import LineButton from '../components/LineButton.astro';
       <div class="line-cta">
         <p class="line-cta-title">📅 ご予約・ご参加はこちらから</p>
         <p class="line-cta-desc">
-          下のボタンから公式LINEを友だち追加 → トークで日時をお送りいただくだけ。
+          予約フォームから日時を選んで送信、または公式LINEから直接ご連絡ください。
         </p>
-        <LineButton label="LINEで友だち追加して予約する" />
+        <div class="line-cta-actions">
+          <a class="btn btn-primary" href={`${base}reserve`}>予約フォームへ</a>
+          <LineButton label="LINEで友だち追加" />
+        </div>
       </div>
 
       <div class="join-card">
@@ -109,5 +114,11 @@ import LineButton from '../components/LineButton.astro';
     color: var(--color-text-muted);
     font-size: 0.92rem;
     margin-bottom: 1.3rem;
+  }
+  .line-cta-actions {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    flex-wrap: wrap;
   }
 </style>

@@ -1,0 +1,273 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { GAS_URL, LIFF_ID, LINE_URL } from '../consts';
+
+// 予約可能な時間枠（10:00〜19:30 / 30分刻み）
+const timeSlots: string[] = [];
+for (let h = 10; h <= 19; h++) {
+  for (const m of ['00', '30']) {
+    timeSlots.push(`${String(h).padStart(2, '0')}:${m}`);
+  }
+}
+---
+
+<Layout
+  title="予約フォーム｜Branch"
+  description="Branchのセッション・講座の予約フォームです。日時を選んで送信してください。"
+>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="page-title">予約フォーム</h1>
+      <p class="page-lead">
+        ご希望の日時を選んで送信してください。<br />
+        LINEから開いた場合は、お名前が自動で入力されます。
+      </p>
+
+      <form id="reserve-form" class="reserve-form">
+        <!-- LINEプロフィール状態 -->
+        <p id="liff-status" class="liff-status" hidden></p>
+
+        <div class="field" id="name-field">
+          <label for="userName">お名前</label>
+          <input
+            type="text"
+            id="userName"
+            name="userName"
+            placeholder="お名前を入力"
+            autocomplete="name"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label for="date">予約日</label>
+          <input type="date" id="date" name="date" required />
+        </div>
+
+        <div class="field">
+          <label for="time">予約時間</label>
+          <select id="time" name="time" required>
+            <option value="" disabled selected>時間を選択</option>
+            {timeSlots.map((t) => <option value={t}>{t}</option>)}
+          </select>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
+          この内容で予約する
+        </button>
+
+        <p id="result" class="result" role="status" aria-live="polite"></p>
+      </form>
+
+      <p class="fallback-note">
+        うまく送信できない場合は、
+        <a href={LINE_URL} target="_blank" rel="noopener noreferrer">公式LINE</a>
+        から直接ご連絡ください。
+      </p>
+    </div>
+  </section>
+</Layout>
+
+<!-- LIFF SDK -->
+<script src="https://static.line-scdn.net/liff/edge/2/sdk.js" is:inline></script>
+
+<script define:vars={{ GAS_URL, LIFF_ID }}>
+  const form = document.getElementById('reserve-form');
+  const nameInput = document.getElementById('userName');
+  const nameField = document.getElementById('name-field');
+  const dateInput = document.getElementById('date');
+  const submitBtn = document.getElementById('submit-btn');
+  const resultEl = document.getElementById('result');
+  const liffStatus = document.getElementById('liff-status');
+
+  let lineUserId = '';
+
+  // 予約日の下限を「今日」に設定
+  (function setMinDate() {
+    const now = new Date();
+    const yyyy = now.getFullYear();
+    const mm = String(now.getMonth() + 1).padStart(2, '0');
+    const dd = String(now.getDate()).padStart(2, '0');
+    dateInput.min = `${yyyy}-${mm}-${dd}`;
+  })();
+
+  function showResult(message, type) {
+    resultEl.textContent = message;
+    resultEl.className = 'result ' + (type || '');
+  }
+
+  // LIFF 初期化
+  async function initLiff() {
+    if (!LIFF_ID || typeof liff === 'undefined') {
+      // LIFF未設定 → Web予約モード（名前は手入力）
+      return;
+    }
+    try {
+      await liff.init({ liffId: LIFF_ID });
+      if (!liff.isLoggedIn()) {
+        liff.login();
+        return;
+      }
+      const profile = await liff.getProfile();
+      lineUserId = profile.userId;
+      nameInput.value = profile.displayName;
+      nameInput.readOnly = true;
+      nameField.classList.add('locked');
+      liffStatus.hidden = false;
+      liffStatus.textContent = `${profile.displayName} さんとして予約します`;
+    } catch (e) {
+      console.error('LIFF init error:', e);
+      // 失敗時もWeb予約モードで継続
+    }
+  }
+
+  initLiff();
+
+  // 送信処理
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    showResult('', '');
+
+    const userName = nameInput.value.trim();
+    const date = dateInput.value;
+    const time = document.getElementById('time').value;
+
+    if (!userName || !date || !time) {
+      showResult('お名前・予約日・予約時間をすべて入力してください。', 'error');
+      return;
+    }
+
+    // GAS側は userId 必須のため、LINE外では一時IDを付与
+    const userId = lineUserId || 'web-' + Date.now();
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送信中…';
+
+    try {
+      // ★ CORSプリフライト回避のため text/plain で送信（GAS側でJSON.parse）
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ userName, userId, date, time }),
+      });
+      const result = await res.json();
+
+      if (result.status === 'success') {
+        showResult(`予約を受け付けました。（${date} ${time}）`, 'success');
+        form.reset();
+        // LIFF経由ならトークに完了メッセージを送って画面を閉じる
+        if (typeof liff !== 'undefined' && LIFF_ID && liff.isInClient && liff.isInClient()) {
+          try {
+            await liff.sendMessages([
+              { type: 'text', text: `予約しました：${date} ${time}` },
+            ]);
+          } catch (_) {}
+          setTimeout(() => liff.closeWindow(), 1200);
+        }
+      } else {
+        showResult('エラー: ' + (result.message || '送信に失敗しました。'), 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      showResult('送信に失敗しました。通信環境をご確認ください。', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'この内容で予約する';
+    }
+  });
+</script>
+
+<style>
+  .narrow {
+    max-width: 560px;
+  }
+  .page-title {
+    font-size: clamp(1.8rem, 5vw, 2.6rem);
+    margin-bottom: 1rem;
+  }
+  .page-lead {
+    color: var(--color-text-muted);
+    margin-bottom: 2.5rem;
+  }
+
+  .reserve-form {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 2rem;
+    display: grid;
+    gap: 1.3rem;
+  }
+  .liff-status {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.6rem 0.9rem;
+    font-size: 0.9rem;
+    color: var(--color-primary-soft);
+    margin: 0;
+  }
+  .field {
+    display: grid;
+    gap: 0.45rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.92rem;
+  }
+  .field input,
+  .field select {
+    width: 100%;
+    padding: 0.75rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .field input:focus,
+  .field select:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(111, 168, 69, 0.18);
+  }
+  .field.locked input {
+    background: var(--color-bg-soft);
+    color: var(--color-text-muted);
+  }
+
+  .submit-btn {
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+    margin-top: 0.3rem;
+  }
+  .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+
+  .result {
+    margin: 0;
+    text-align: center;
+    font-size: 0.92rem;
+    min-height: 1.2em;
+  }
+  .result.success {
+    color: var(--color-primary-soft);
+    font-weight: 700;
+  }
+  .result.error {
+    color: #d9534f;
+  }
+
+  .fallback-note {
+    text-align: center;
+    color: var(--color-text-muted);
+    font-size: 0.88rem;
+    margin-top: 1.5rem;
+  }
+</style>

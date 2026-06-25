@@ -5,3 +5,15 @@ export const LINE_URL = 'https://lin.ee/SvCKDYoj';
 
 /** LINEボタンの既定ラベル */
 export const LINE_LABEL = 'LINEで予約・相談';
+
+/** 予約データ送信先（Google Apps Script ウェブアプリURL） */
+export const GAS_URL =
+  'https://script.google.com/macros/s/AKfycbxaCiNBYjP6VeU-AZZHVRrnJhQNX3o4VA7NIZg4YIl6NO4Q3FNm3bDGfb6C2aRdd3ervg/exec';
+
+/**
+ * LIFF ID（LINE Developers コンソールで発行）
+ * 未設定（空文字）の場合は、LINE外からの利用とみなして
+ * 名前を手入力する「Web予約モード」で動作します。
+ * LIFFアプリとして使う場合は、発行された LIFF ID を設定してください。
+ */
+export const LIFF_ID = '';
