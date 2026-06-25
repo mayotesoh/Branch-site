@@ -1,69 +1,72 @@
 # Branch 予約API（Google Apps Script）
 
-LINE LIFF アプリから送信された予約データを Google スプレッドシートへ自動転記する Web API です。
+予約データを Google スプレッドシートへ転記する Web API です。
+**サイトの予約フォーム / LIFF** と **LINE 対話式予約（Messaging API）** の両方を、
+1つの `doPost` で受け付けます。
 
-## セットアップ手順
+## ファイル構成
 
-1. [Google Apps Script](https://script.google.com/) で新規プロジェクトを作成
-2. `Code.gs` の内容を貼り付けて保存
-3. **デプロイ → 新しいデプロイ** を選択
-   - 種類: **ウェブアプリ**
-   - 実行ユーザー: **自分**
-   - アクセスできるユーザー: **全員**
-4. 発行された **ウェブアプリURL**（`https://script.google.com/macros/s/XXXX/exec`）を控える
-5. 初回デプロイ時に権限の承認（スプレッドシートへのアクセス）を許可
+| ファイル | 役割 |
+| --- | --- |
+| `Code.gs` | doPost ルーター・フォーム予約処理・シート追記 |
+| `LineBot.gs` | LINE 対話式予約（コンテンツ選択→日時入力→シート反映） |
+| `RichMenu.gs` | リッチメニュー作成（API利用時。任意） |
 
-> スプレッドシートID `1bsp2ZZVIA_VplkT1eCt0rUmbYOmIIn9I3dIgem4fA7Y` の
-> **最初のシート**に `[タイムスタンプ, userName, userId, date, time]` を追記します。
-> 見出し行が無い場合は初回書き込み時に自動で追加します。
+## スプレッドシートの列
 
-## CORS について（重要）
+```
+タイムスタンプ | userName | userId | メールアドレス | date | time | コンテンツ
+```
 
-GAS の `ContentService` は `Access-Control-Allow-Origin` などの
-レスポンスヘッダーを設定できません。
-そのため **フロント（LIFF）側で `Content-Type: text/plain;charset=utf-8` を指定**して送信します。
-これにより CORS プリフライト（OPTIONS）が発生しない「単純リクエスト」となり、
-クロスドメインでもエラーになりません。
+> 旧仕様（メールアドレス・コンテンツ列なし）から変更した場合は、
+> 一度だけ `Code.gs` の **`resetHeaders()`** を実行すると見出しを作り直せます
+> （※既存データは消えます。テスト行の掃除を兼ねてどうぞ）。
 
-## フロントエンド（LIFF）側 送信サンプル
+## セットアップ
+
+### 1. コードの更新とデプロイ
+1. [Google Apps Script](https://script.google.com/) の既存プロジェクトを開く
+2. `Code.gs` / `LineBot.gs` / `RichMenu.gs` の内容を反映（新規ファイルは「ファイル＋」で追加）
+3. **デプロイ → デプロイを管理 → 編集（鉛筆）→ 新バージョン → デプロイ**
+   - アクセスできるユーザー: **全員**／実行するユーザー: **自分**（URLは変わりません）
+
+### 2. LINE Messaging API の設定（対話式予約）
+1. [LINE Developers](https://developers.line.biz/) で対象アカウントの **Messaging API チャネル** を開く
+2. **チャネルアクセストークン（長期）** を発行し、`LineBot.gs` の
+   `LINE_CHANNEL_ACCESS_TOKEN` に貼り付け
+3. **Webhook URL** に GAS のデプロイURL（`.../exec`）を設定し、**Webhookの利用をON**
+4. **応答メッセージ（自動応答）をOFF** にする（ボットが返信を制御するため）
+
+### 3. リッチメニュー（小・1枠）
+**かんたん（推奨・コード不要）**: LINE公式アカウントマネージャー → リッチメニュー → 作成
+- テンプレート: 「小」の1枠
+- 画像: 2500×843 PNG/JPEG（`public/richmenu.svg` をPNG書き出し可）
+- アクション: **「テキスト」→「予約」**（タップで予約フロー開始）
+
+**APIで作る場合**: `RichMenu.gs` の `createReserveRichMenu()` →
+`uploadRichMenuImage()` → `setDefaultRichMenu()` を順に実行。
+
+## 対話の流れ（LINE）
+
+1. リッチメニューをタップ（または「予約」と送信）
+2. コンテンツをクイックリプライから選択
+3. 希望日時を入力（例: `2026-07-01 14:00`）
+4. スプレッドシートに追記され、完了メッセージが返信される
+
+## サイトフォーム送信サンプル（参考）
 
 ```javascript
-const GAS_URL = 'https://script.google.com/macros/s/XXXX/exec'; // ←デプロイURL
-
-async function sendReservation({ userName, userId, date, time }) {
-  try {
-    const res = await fetch(GAS_URL, {
-      method: 'POST',
-      // ★ application/json にしない（プリフライト回避のため text/plain）
-      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-      body: JSON.stringify({ userName, userId, date, time }),
-    });
-    const result = await res.json();
-    if (result.status === 'success') {
-      alert('予約を受け付けました。');
-    } else {
-      alert('エラー: ' + result.message);
-    }
-    return result;
-  } catch (e) {
-    alert('送信に失敗しました。通信環境をご確認ください。');
-    throw e;
-  }
-}
-
-// LIFF からユーザー情報を取得して送信する例
-// const profile = await liff.getProfile();
-// sendReservation({
-//   userName: profile.displayName,
-//   userId: profile.userId,
-//   date: '2026-07-01',
-//   time: '14:00',
-// });
+await fetch(GAS_URL, {
+  method: 'POST',
+  headers: { 'Content-Type': 'text/plain;charset=utf-8' }, // ★ CORS回避
+  body: JSON.stringify({ userName, userId, email, content, date, time }),
+});
 ```
 
 ## レスポンス
 
-| 状態 | レスポンス例 |
+| 状態 | 例 |
 | --- | --- |
 | 成功 | `{"status":"success"}` |
-| 失敗 | `{"status":"error","message":"必須項目が不足しています（userId / date / time）。"}` |
+| 失敗 | `{"status":"error","message":"必須項目が不足しています（userId / content / date / time）。"}` |
+| LINE Webhook受信 | `{"status":"ok"}` |

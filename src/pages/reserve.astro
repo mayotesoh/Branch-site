@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { GAS_URL, LIFF_ID, LINE_URL } from '../consts';
+import { GAS_URL, LIFF_ID, LINE_URL, CONTENT_TYPES } from '../consts';
 
 // 予約可能な時間枠（10:00〜19:30 / 30分刻み）
 const timeSlots: string[] = [];
@@ -37,6 +37,26 @@ for (let h = 10; h <= 19; h++) {
             autocomplete="name"
             required
           />
+        </div>
+
+        <div class="field">
+          <label for="email">メールアドレス</label>
+          <input
+            type="email"
+            id="email"
+            name="email"
+            placeholder="example@email.com"
+            autocomplete="email"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label for="content">予約内容</label>
+          <select id="content" name="content" required>
+            <option value="" disabled selected>コンテンツを選択</option>
+            {CONTENT_TYPES.map((c) => <option value={c}>{c}</option>)}
+          </select>
         </div>
 
         <div class="field">
@@ -129,11 +149,17 @@ for (let h = 10; h <= 19; h++) {
     showResult('', '');
 
     const userName = nameInput.value.trim();
+    const email = document.getElementById('email').value.trim();
+    const content = document.getElementById('content').value;
     const date = dateInput.value;
     const time = document.getElementById('time').value;
 
-    if (!userName || !date || !time) {
-      showResult('お名前・予約日・予約時間をすべて入力してください。', 'error');
+    if (!userName || !email || !content || !date || !time) {
+      showResult('すべての項目を入力してください。', 'error');
+      return;
+    }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+      showResult('メールアドレスの形式が正しくありません。', 'error');
       return;
     }
 
@@ -148,18 +174,18 @@ for (let h = 10; h <= 19; h++) {
       const res = await fetch(GAS_URL, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ userName, userId, date, time }),
+        body: JSON.stringify({ userName, userId, email, content, date, time }),
       });
       const result = await res.json();
 
       if (result.status === 'success') {
-        showResult(`予約を受け付けました。（${date} ${time}）`, 'success');
+        showResult(`予約を受け付けました。（${content} / ${date} ${time}）`, 'success');
         form.reset();
         // LIFF経由ならトークに完了メッセージを送って画面を閉じる
         if (typeof liff !== 'undefined' && LIFF_ID && liff.isInClient && liff.isInClient()) {
           try {
             await liff.sendMessages([
-              { type: 'text', text: `予約しました：${date} ${time}` },
+              { type: 'text', text: `予約しました：${content} / ${date} ${time}` },
             ]);
           } catch (_) {}
           setTimeout(() => liff.closeWindow(), 1200);

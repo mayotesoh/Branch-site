@@ -17,3 +17,14 @@ export const GAS_URL =
  * LIFFアプリとして使う場合は、発行された LIFF ID を設定してください。
  */
 export const LIFF_ID = '';
+
+/** 予約できるコンテンツの種別（サイトフォーム / LINEで共通） */
+export const CONTENT_TYPES = [
+  '体験講座',
+  '養成講座',
+  '個別セッション',
+  '練習会・ロープレ',
+  '鑑定',
+  'キャリア相談',
+  'その他',
+];
