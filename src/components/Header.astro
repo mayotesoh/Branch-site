@@ -19,7 +19,20 @@ const links = [
       <span class="brand-mark">✦</span>
       <span class="brand-name">Branch</span>
     </a>
-    <nav class="nav">
+
+    <button
+      class="nav-toggle"
+      type="button"
+      aria-label="メニューを開く"
+      aria-expanded="false"
+      aria-controls="site-nav"
+    >
+      <span class="nav-toggle-bar"></span>
+      <span class="nav-toggle-bar"></span>
+      <span class="nav-toggle-bar"></span>
+    </button>
+
+    <nav class="nav" id="site-nav">
       {links.map((l) => <a href={l.href}>{l.label}</a>)}
     </nav>
   </div>
@@ -67,13 +80,107 @@ const links = [
   .nav a:hover {
     color: var(--color-accent-soft);
   }
-  @media (max-width: 640px) {
-    .nav {
-      gap: 0.9rem;
-      font-size: 0.8rem;
+
+  /* ハンバーガーボタン（PCでは非表示） */
+  .nav-toggle {
+    display: none;
+    flex-direction: column;
+    justify-content: center;
+    gap: 5px;
+    width: 44px;
+    height: 44px;
+    padding: 0;
+    border: none;
+    background: transparent;
+    cursor: pointer;
+  }
+  .nav-toggle-bar {
+    display: block;
+    width: 24px;
+    height: 2px;
+    margin: 0 auto;
+    border-radius: 2px;
+    background: var(--color-text);
+    transition: transform 0.25s ease, opacity 0.25s ease;
+  }
+
+  @media (max-width: 720px) {
+    .nav-toggle {
+      display: flex;
     }
-    .brand-name {
-      display: none;
+    .nav {
+      position: absolute;
+      top: 64px;
+      left: 0;
+      right: 0;
+      flex-direction: column;
+      gap: 0;
+      padding: 0.5rem 0;
+      background: rgba(247, 250, 242, 0.98);
+      backdrop-filter: blur(10px);
+      border-bottom: 1px solid var(--color-border);
+      box-shadow: 0 8px 20px rgba(0, 0, 0, 0.06);
+      max-height: 0;
+      overflow: hidden;
+      opacity: 0;
+      pointer-events: none;
+      transition: max-height 0.28s ease, opacity 0.2s ease;
+    }
+    .nav.is-open {
+      max-height: 70vh;
+      opacity: 1;
+      pointer-events: auto;
+    }
+    .nav a {
+      padding: 0.85rem 1.25rem;
+      font-size: 1rem;
+      border-top: 1px solid var(--color-border);
+    }
+    .nav a:first-child {
+      border-top: none;
+    }
+    /* 開いているときは ✕ 形に */
+    .nav-toggle[aria-expanded='true'] .nav-toggle-bar:nth-child(1) {
+      transform: translateY(7px) rotate(45deg);
+    }
+    .nav-toggle[aria-expanded='true'] .nav-toggle-bar:nth-child(2) {
+      opacity: 0;
+    }
+    .nav-toggle[aria-expanded='true'] .nav-toggle-bar:nth-child(3) {
+      transform: translateY(-7px) rotate(-45deg);
     }
   }
 </style>
+
+<script>
+  const toggle = document.querySelector('.nav-toggle');
+  const nav = document.getElementById('site-nav');
+
+  if (toggle && nav) {
+    const setOpen = (open: boolean) => {
+      nav.classList.toggle('is-open', open);
+      toggle.setAttribute('aria-expanded', String(open));
+      toggle.setAttribute('aria-label', open ? 'メニューを閉じる' : 'メニューを開く');
+    };
+
+    toggle.addEventListener('click', () => {
+      setOpen(toggle.getAttribute('aria-expanded') !== 'true');
+    });
+
+    // リンクをタップしたら閉じる
+    nav.querySelectorAll('a').forEach((a) => {
+      a.addEventListener('click', () => setOpen(false));
+    });
+
+    // メニュー外をタップしたら閉じる
+    document.addEventListener('click', (e) => {
+      if (
+        toggle.getAttribute('aria-expanded') === 'true' &&
+        !nav.contains(e.target as Node) &&
+        !toggle.contains(e.target as Node)
+      ) {
+        setOpen(false);
+      }
+    });
+  }
+</script>
