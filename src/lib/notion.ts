@@ -5,6 +5,7 @@ import { marked } from 'marked';
 // DB ID は機密ではないためコードに保持。トークンだけ環境変数（.env / CI Secret）。
 export const BLOG_DB = '04e8f32855ae4e80865ab3f2b92798cb';
 export const INSTR_DB = '30e989297ce14ea99cbea84a2e5e2180';
+export const COURSE_DB = '9e653e0af59e47ebb3c1c9d443339e48';
 
 const token =
   (import.meta.env as any).NOTION_TOKEN ?? process.env.NOTION_TOKEN;
@@ -125,6 +126,72 @@ export function getPosts(): Promise<PostMeta[]> {
     })();
   }
   return _posts;
+}
+
+// ---- 講座 ----
+export interface Course {
+  name: string;
+  type: string; // 養成講座 / セッション
+  category: string;
+  instructor: string;
+  courseName: string;
+  desc: string;
+  period: string;
+  method: string;
+  afterCare: boolean;
+  note: string;
+  extra: string;
+  order: number;
+  curriculum: string[];
+}
+
+let _courses: Promise<Course[]> | null = null;
+
+export function getCourses(): Promise<Course[]> {
+  if (!_courses) {
+    _courses = (async () => {
+      const rows = await queryAll(COURSE_DB, {
+        filter: { property: '公開', checkbox: { equals: true } },
+        sorts: [{ property: '表示順', direction: 'ascending' }],
+      });
+      return Promise.all(
+        rows.map(async (r) => {
+          const p = r.properties;
+          const type = pSelect(p['種別']);
+          let curriculum: string[] = [];
+          if (type === '養成講座') {
+            const blocks: any = await notion.blocks.children.list({
+              block_id: r.id,
+              page_size: 100,
+            });
+            curriculum = blocks.results
+              .filter((b: any) => b.type === 'bulleted_list_item')
+              .map((b: any) =>
+                b.bulleted_list_item.rich_text
+                  .map((t: any) => t.plain_text)
+                  .join('')
+              );
+          }
+          return {
+            name: pText(p['講座名']),
+            type,
+            category: pSelect(p['カテゴリ']),
+            instructor: pText(p['担当講師名']),
+            courseName: pText(p['コース名']),
+            desc: pText(p['説明']),
+            period: pText(p['期間・時間']),
+            method: pText(p['提供方法']),
+            afterCare: pCheckbox(p['アフターフォロー']),
+            note: pText(p['備考']),
+            extra: pText(p['補足']),
+            order: p['表示順']?.number ?? 0,
+            curriculum,
+          } as Course;
+        })
+      );
+    })();
+  }
+  return _courses;
 }
 
 // ---- 記事本文（Markdown → HTML） ----

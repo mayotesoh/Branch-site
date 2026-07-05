@@ -150,9 +150,11 @@ GitHub Actions の Secrets にも登録してビルドで参照する。
    - `@notionhq/client@2.2.15` + `notion-to-md` + `marked`
    - トークンは `.env`（ローカル）/ GitHub Secret `NOTION_TOKEN`（CI）
    - 定期再ビルド（1日2回）＋手動（Actions の Run workflow）で反映
-4. **[要検討]** 講座ページを Notion 講座DB 連動に置き換え
-   - 現 `courses.astro` はカリキュラム/カテゴリ/提供方法など**リッチ構造**。
-     最小スキーマのままだと情報が欠落するため、講座DBの**プロパティ拡張が必要**（§8）。
+4. **[完了]** 講座ページを Notion 講座DB 連動に置き換え
+   - 講座DBを §8 の通り拡張（カテゴリ/担当講師名/コース名/期間・時間/提供方法/
+     アフターフォロー/備考/補足）し、全33講座（養成5＋セッション28）を投入
+   - `src/lib/notion.ts` の `getCourses()` で取得（カリキュラムはページ本文の箇条書き）
+   - カテゴリのアイコン・リード文は `courses.astro` 側で保持
 5. **[コード実装済 / 要デプロイ]** GAS に予約→Notion同期を追加
    - `gas/NotionSync.gs`：`syncReservationToNotion()` を追加
    - `gas/Code.gs`：`appendReservation()` 末尾で try/catch 呼び出し（記録優先）
