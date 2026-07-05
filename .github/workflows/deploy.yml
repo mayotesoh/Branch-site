@@ -4,8 +4,12 @@ on:
   # main ブランチへの push で自動デプロイ
   push:
     branches: [main]
-  # Actions タブから手動実行も可能
+  # Actions タブから手動実行も可能（Notionの内容を「今すぐ反映」）
   workflow_dispatch:
+  # Notionの更新を定期的に取り込む（UTC。日本時間の朝9時・夜21時）
+  schedule:
+    - cron: '0 0 * * *'
+    - cron: '0 12 * * *'
 
 # GitHub Pages へのデプロイに必要な権限
 permissions:
@@ -36,6 +40,8 @@ jobs:
 
       - name: Build with Astro
         run: npm run build
+        env:
+          NOTION_TOKEN: ${{ secrets.NOTION_TOKEN }}
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3

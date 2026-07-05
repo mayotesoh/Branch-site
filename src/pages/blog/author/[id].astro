@@ -1,46 +1,39 @@
 ---
 import Layout from '../../../layouts/Layout.astro';
-import { getCollection } from 'astro:content';
-import { authors, getAuthor } from '../../../data/authors';
+import { getAuthors, getPosts } from '../../../lib/notion';
 
 export async function getStaticPaths() {
-  return authors.map((a) => ({ params: { id: a.id } }));
+  const authors = await getAuthors();
+  return authors.map((a) => ({ params: { id: a.id }, props: { author: a } }));
 }
 
+const { author } = Astro.props;
 const { id } = Astro.params;
-const author = getAuthor(id!);
 
 const base = import.meta.env.BASE_URL;
 const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
-const asset = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
 const fmtDate = (d: Date) =>
   `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 
-const posts = (
-  await getCollection('blog', ({ data }) => !data.draft && data.author === id)
-).sort((a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf());
+const posts = (await getPosts()).filter((p) => p.authorId === id);
 ---
 
 <Layout
-  title={`${author?.name ?? '占い師'}の記事｜Branch`}
-  description={`${author?.name ?? ''} が綴るブログ記事の一覧です。`}
+  title={`${author.name}の記事｜Branch`}
+  description={`${author.name} が綴るブログ記事の一覧です。`}
 >
   <section class="section">
     <div class="container">
       <a class="back" href={link('/blog')}>← ブログ一覧へ</a>
 
-      {
-        author && (
-          <header class="author-head">
-            <img src={asset(author.image)} alt={`${author.name}の写真`} />
-            <div>
-              <h1 class="author-name">{author.name}</h1>
-              {author.kana && <p class="author-kana">{author.kana}</p>}
-              <p class="author-role">{author.role}</p>
-            </div>
-          </header>
-        )
-      }
+      <header class="author-head">
+        {author.image && <img src={author.image} alt={`${author.name}の写真`} />}
+        <div>
+          <h1 class="author-name">{author.name}</h1>
+          {author.kana && <p class="author-kana">{author.kana}</p>}
+          {author.role && <p class="author-role">{author.role}</p>}
+        </div>
+      </header>
 
       {
         posts.length === 0 ? (
@@ -49,12 +42,10 @@ const posts = (
           <ul class="post-list">
             {posts.map((post) => (
               <li class="post-card">
-                <a class="post-link" href={link(`/blog/${post.id}`)}>
-                  <span class="post-date">{fmtDate(post.data.publishDate)}</span>
-                  <h2 class="post-title">{post.data.title}</h2>
-                  {post.data.excerpt && (
-                    <p class="post-excerpt">{post.data.excerpt}</p>
-                  )}
+                <a class="post-link" href={link(`/blog/${post.slug}`)}>
+                  <span class="post-date">{fmtDate(post.publishDate)}</span>
+                  <h2 class="post-title">{post.title}</h2>
+                  {post.excerpt && <p class="post-excerpt">{post.excerpt}</p>}
                 </a>
               </li>
             ))}

@@ -1,18 +1,14 @@
 ---
 import Layout from '../../layouts/Layout.astro';
-import { getCollection } from 'astro:content';
-import { getAuthor } from '../../data/authors';
+import { getPosts } from '../../lib/notion';
 
 const base = import.meta.env.BASE_URL;
 const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
-const asset = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
 
 const fmtDate = (d: Date) =>
   `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 
-const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
-  (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf()
-);
+const posts = await getPosts();
 ---
 
 <Layout
@@ -24,30 +20,31 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
       <h1 class="section-title">ブログ</h1>
       <p class="section-lead">Branchの占い師が綴る、学びと気づき</p>
 
-      <ul class="post-list">
-        {
-          posts.map((post) => {
-            const author = getAuthor(post.data.author);
-            return (
+      {
+        posts.length === 0 ? (
+          <p class="empty">まだ記事がありません。</p>
+        ) : (
+          <ul class="post-list">
+            {posts.map((post) => (
               <li class="post-card">
-                <a class="post-link" href={link(`/blog/${post.id}`)}>
-                  {post.data.cover && (
+                <a class="post-link" href={link(`/blog/${post.slug}`)}>
+                  {post.cover && (
                     <div class="post-cover">
-                      <img src={asset(post.data.cover)} alt="" loading="lazy" />
+                      <img src={post.cover} alt="" loading="lazy" />
                     </div>
                   )}
                   <div class="post-body">
                     <div class="post-meta">
-                      <span class="post-date">{fmtDate(post.data.publishDate)}</span>
-                      {author && <span class="post-author">{author.name}</span>}
+                      <span class="post-date">{fmtDate(post.publishDate)}</span>
+                      {post.authorName && (
+                        <span class="post-author">{post.authorName}</span>
+                      )}
                     </div>
-                    <h2 class="post-title">{post.data.title}</h2>
-                    {post.data.excerpt && (
-                      <p class="post-excerpt">{post.data.excerpt}</p>
-                    )}
-                    {post.data.tags.length > 0 && (
+                    <h2 class="post-title">{post.title}</h2>
+                    {post.excerpt && <p class="post-excerpt">{post.excerpt}</p>}
+                    {post.tags.length > 0 && (
                       <ul class="post-tags">
-                        {post.data.tags.map((t) => (
+                        {post.tags.map((t) => (
                           <li>#{t}</li>
                         ))}
                       </ul>
@@ -55,15 +52,19 @@ const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
                   </div>
                 </a>
               </li>
-            );
-          })
-        }
-      </ul>
+            ))}
+          </ul>
+        )
+      }
     </div>
   </section>
 </Layout>
 
 <style>
+  .empty {
+    text-align: center;
+    color: var(--color-text-muted);
+  }
   .post-list {
     list-style: none;
     display: grid;

@@ -142,10 +142,24 @@ GitHub Actions の Secrets にも登録してビルドで参照する。
 
 ---
 
-## 7. 進め方（次アクション）
+## 7. 実装状況・進め方
 
-1. **[実装済]** ブログ基盤（ローカルMD・著者別ページ）
-2. Notion側で §2 のDBを作成（テンプレは本書のとおり）
-3. APIトークン / Database ID を共有 → サイトを Notion 差し替え
-4. 講座ページを Notion 講座DB 連動に置き換え
-5. GAS に予約→Notion同期を追加
+1. **[完了]** ブログ基盤（一覧 / 記事 / 著者別ページ）
+2. **[完了]** Notion 4DB 作成・インテグレーション接続
+3. **[完了]** ブログを Notion 取得に差し替え（`src/lib/notion.ts`）
+   - `@notionhq/client@2.2.15` + `notion-to-md` + `marked`
+   - トークンは `.env`（ローカル）/ GitHub Secret `NOTION_TOKEN`（CI）
+   - 定期再ビルド（1日2回）＋手動（Actions の Run workflow）で反映
+4. **[次]** 講座ページを Notion 講座DB 連動に置き換え
+5. **[次]** GAS に予約→Notion同期を追加
+
+### ブログ記事の書き方（運営者向け）
+1. Notion「ブログ記事DB」で新規ページを作成
+2. **タイトル / 著者（講師DBから選択）/ 公開日 / 抜粋 / タグ** を入力し、本文を書く
+3. **公開状態を「公開」** にする
+4. 反映は自動（1日2回）。すぐ反映したい場合は
+   GitHub → Actions → 「Deploy to GitHub Pages」→ **Run workflow**
+
+> slug は任意（空ならNotionのページIDが使われる）。URLを固定したいときだけ入力。
+> カバー・本文中の画像は Notion アップロードだと表示URLが期限切れになるため、
+> **外部URL画像**の利用を推奨（恒久運用は画像ダウンロード対応を別途検討）。
