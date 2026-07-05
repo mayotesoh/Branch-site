@@ -1,0 +1,166 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection, render } from 'astro:content';
+import { getAuthor } from '../../data/authors';
+
+export async function getStaticPaths() {
+  const posts = await getCollection('blog', ({ data }) => !data.draft);
+  return posts.map((post) => ({
+    params: { slug: post.id },
+    props: { post },
+  }));
+}
+
+const { post } = Astro.props;
+const { Content } = await render(post);
+const author = getAuthor(post.data.author);
+
+const base = import.meta.env.BASE_URL;
+const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+const asset = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+const fmtDate = (d: Date) =>
+  `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+---
+
+<Layout title={`${post.data.title}｜Branch`} description={post.data.excerpt}>
+  <article class="section">
+    <div class="container narrow">
+      <a class="back" href={link('/blog')}>← ブログ一覧へ</a>
+
+      <div class="article-meta">
+        <span class="date">{fmtDate(post.data.publishDate)}</span>
+        {
+          post.data.tags.map((t) => <span class="tag">#{t}</span>)
+        }
+      </div>
+      <h1 class="article-title">{post.data.title}</h1>
+
+      {
+        author && (
+          <a class="author-chip" href={link(`/blog/author/${author.id}`)}>
+            <img src={asset(author.image)} alt={`${author.name}の写真`} />
+            <span>
+              <span class="author-name">{author.name}</span>
+              <span class="author-role">{author.role}</span>
+            </span>
+          </a>
+        )
+      }
+
+      {
+        post.data.cover && (
+          <div class="article-cover">
+            <img src={asset(post.data.cover)} alt="" />
+          </div>
+        )
+      }
+
+      <div class="prose">
+        <Content />
+      </div>
+
+      {
+        author && (
+          <div class="author-more">
+            <a class="btn btn-ghost" href={link(`/blog/author/${author.id}`)}>
+              {author.name} の記事をもっと見る
+            </a>
+          </div>
+        )
+      }
+    </div>
+  </article>
+</Layout>
+
+<style>
+  .narrow {
+    max-width: 720px;
+  }
+  .back {
+    display: inline-block;
+    font-size: 0.9rem;
+    margin-bottom: 1.5rem;
+  }
+  .article-meta {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+    font-size: 0.85rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .article-meta .tag {
+    color: var(--color-accent-soft);
+  }
+  .article-title {
+    font-size: clamp(1.5rem, 4.5vw, 2.1rem);
+    margin-bottom: 1.5rem;
+  }
+  .author-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.75rem;
+    color: inherit;
+    margin-bottom: 2rem;
+  }
+  .author-chip img {
+    width: 48px;
+    height: 48px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 1px solid var(--color-border);
+  }
+  .author-name {
+    display: block;
+    font-weight: 700;
+  }
+  .author-role {
+    display: block;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+  }
+  .article-cover {
+    margin-bottom: 2rem;
+  }
+  .article-cover img {
+    width: 100%;
+    border-radius: var(--radius);
+    display: block;
+  }
+
+  .prose {
+    line-height: 1.9;
+  }
+  .prose :global(h2) {
+    font-size: 1.35rem;
+    margin: 2.2rem 0 0.9rem;
+    padding-bottom: 0.4rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .prose :global(h3) {
+    font-size: 1.15rem;
+    margin: 1.8rem 0 0.7rem;
+  }
+  .prose :global(p) {
+    margin-bottom: 1.2rem;
+  }
+  .prose :global(ul),
+  .prose :global(ol) {
+    margin: 0 0 1.2rem 1.4rem;
+  }
+  .prose :global(li) {
+    margin-bottom: 0.4rem;
+  }
+  .prose :global(strong) {
+    color: var(--color-primary-soft);
+  }
+  .prose :global(a) {
+    text-decoration: underline;
+  }
+
+  .author-more {
+    margin-top: 3rem;
+    text-align: center;
+  }
+</style>

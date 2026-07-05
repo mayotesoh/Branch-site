@@ -1,0 +1,128 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getCollection } from 'astro:content';
+import { getAuthor } from '../../data/authors';
+
+const base = import.meta.env.BASE_URL;
+const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+const asset = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+
+const fmtDate = (d: Date) =>
+  `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+
+const posts = (await getCollection('blog', ({ data }) => !data.draft)).sort(
+  (a, b) => b.data.publishDate.valueOf() - a.data.publishDate.valueOf()
+);
+---
+
+<Layout
+  title="ブログ｜Branch"
+  description="Branch所属の占い師が綴る、占いの学びと日々の気づき。"
+>
+  <section class="section">
+    <div class="container">
+      <h1 class="section-title">ブログ</h1>
+      <p class="section-lead">Branchの占い師が綴る、学びと気づき</p>
+
+      <ul class="post-list">
+        {
+          posts.map((post) => {
+            const author = getAuthor(post.data.author);
+            return (
+              <li class="post-card">
+                <a class="post-link" href={link(`/blog/${post.id}`)}>
+                  {post.data.cover && (
+                    <div class="post-cover">
+                      <img src={asset(post.data.cover)} alt="" loading="lazy" />
+                    </div>
+                  )}
+                  <div class="post-body">
+                    <div class="post-meta">
+                      <span class="post-date">{fmtDate(post.data.publishDate)}</span>
+                      {author && <span class="post-author">{author.name}</span>}
+                    </div>
+                    <h2 class="post-title">{post.data.title}</h2>
+                    {post.data.excerpt && (
+                      <p class="post-excerpt">{post.data.excerpt}</p>
+                    )}
+                    {post.data.tags.length > 0 && (
+                      <ul class="post-tags">
+                        {post.data.tags.map((t) => (
+                          <li>#{t}</li>
+                        ))}
+                      </ul>
+                    )}
+                  </div>
+                </a>
+              </li>
+            );
+          })
+        }
+      </ul>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .post-list {
+    list-style: none;
+    display: grid;
+    gap: 1.5rem;
+    max-width: 760px;
+    margin-inline: auto;
+  }
+  .post-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .post-card:hover {
+    transform: translateY(-3px);
+    box-shadow: 0 12px 28px rgba(91, 145, 53, 0.14);
+  }
+  .post-link {
+    display: block;
+    color: inherit;
+  }
+  .post-cover img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+  }
+  .post-body {
+    padding: 1.5rem 1.75rem;
+  }
+  .post-meta {
+    display: flex;
+    gap: 0.9rem;
+    font-size: 0.82rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .post-author::before {
+    content: '✦ ';
+    color: var(--color-accent);
+  }
+  .post-title {
+    font-size: 1.3rem;
+    margin-bottom: 0.6rem;
+  }
+  .post-excerpt {
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+    margin-bottom: 0.9rem;
+  }
+  .post-tags {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+  }
+  .post-tags li {
+    font-size: 0.8rem;
+    color: var(--color-accent-soft);
+  }
+</style>
