@@ -104,6 +104,13 @@ function appendReservation(r) {
   } finally {
     lock.releaseLock();
   }
+
+  // Notion「予約管理DB」にも同期（失敗してもスプシ記録は成立させる）
+  try {
+    syncReservationToNotion(r); // NotionSync.gs
+  } catch (err) {
+    console.error('Notion同期に失敗しました: ' + (err && err.message ? err.message : err));
+  }
 }
 
 /**
