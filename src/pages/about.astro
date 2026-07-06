@@ -1,0 +1,218 @@
+---
+import Layout from '../layouts/Layout.astro';
+import LineButton from '../components/LineButton.astro';
+
+const base = import.meta.env.BASE_URL;
+const asset = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+const joinUrl = `${base.replace(/\/$/, '')}/join`;
+
+// 提案資料スライド（public/proposal/1.png 〜 18.png）
+const slides = Array.from({ length: 18 }, (_, i) => asset(`/proposal/${i + 1}.png`));
+---
+
+<Layout
+  title="コミュニティ紹介｜Branch"
+  description="占い師のための実践型コミュニティ「Branch」のご紹介。学びを活躍に変える仲間・カリキュラム・活動の場をまとめた提案資料です。"
+>
+  <section class="section">
+    <div class="container">
+      <h1 class="section-title">コミュニティ紹介</h1>
+      <p class="section-lead">
+        占いの“学び”を“活躍”に変える、実践型コミュニティ Branch のご案内
+      </p>
+
+      <div class="deck" id="deck">
+        {
+          slides.map((src, i) => (
+            <figure class="slide">
+              <img
+                src={src}
+                alt={`Branch コミュニティ紹介 ${i + 1}／${slides.length}`}
+                loading={i < 2 ? 'eager' : 'lazy'}
+                data-index={i}
+              />
+            </figure>
+          ))
+        }
+      </div>
+
+      <div class="about-cta">
+        <p>詳しいご案内やご質問は、公式LINEからお気軽にどうぞ。</p>
+        <div class="about-cta-actions">
+          <LineButton label="LINEで相談・登録する" />
+          <a class="btn btn-ghost" href={joinUrl}>参加方法を見る</a>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ライトボックス -->
+  <div class="lightbox" id="lightbox" aria-hidden="true">
+    <button class="lb-close" id="lbClose" aria-label="閉じる">✕</button>
+    <button class="lb-nav lb-prev" id="lbPrev" aria-label="前へ">‹</button>
+    <img class="lb-img" id="lbImg" src="" alt="" />
+    <button class="lb-nav lb-next" id="lbNext" aria-label="次へ">›</button>
+    <span class="lb-count" id="lbCount"></span>
+  </div>
+</Layout>
+
+<style>
+  .deck {
+    display: grid;
+    gap: 1.25rem;
+    max-width: 900px;
+    margin-inline: auto;
+  }
+  .slide {
+    margin: 0;
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    background: #fff;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.05);
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .slide:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 10px 24px rgba(0, 0, 0, 0.1);
+  }
+  .slide img {
+    display: block;
+    width: 100%;
+    height: auto;
+    cursor: zoom-in;
+  }
+
+  .about-cta {
+    text-align: center;
+    margin-top: 3rem;
+    padding: 2.5rem 1rem;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+  }
+  .about-cta p {
+    color: var(--color-text-muted);
+    margin-bottom: 1.5rem;
+  }
+  .about-cta-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  /* ライトボックス */
+  .lightbox {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: none;
+    align-items: center;
+    justify-content: center;
+    background: rgba(0, 0, 0, 0.9);
+    padding: 1rem;
+  }
+  .lightbox.open {
+    display: flex;
+  }
+  .lb-img {
+    max-width: 96vw;
+    max-height: 88vh;
+    border-radius: 6px;
+    box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5);
+  }
+  .lb-close,
+  .lb-nav {
+    position: absolute;
+    background: rgba(255, 255, 255, 0.15);
+    color: #fff;
+    border: none;
+    cursor: pointer;
+    border-radius: 999px;
+    transition: background 0.15s ease;
+  }
+  .lb-close:hover,
+  .lb-nav:hover {
+    background: rgba(255, 255, 255, 0.3);
+  }
+  .lb-close {
+    top: 1rem;
+    right: 1rem;
+    width: 44px;
+    height: 44px;
+    font-size: 1.2rem;
+  }
+  .lb-nav {
+    top: 50%;
+    transform: translateY(-50%);
+    width: 52px;
+    height: 52px;
+    font-size: 2rem;
+    line-height: 1;
+  }
+  .lb-prev {
+    left: 1rem;
+  }
+  .lb-next {
+    right: 1rem;
+  }
+  .lb-count {
+    position: absolute;
+    bottom: 1rem;
+    left: 50%;
+    transform: translateX(-50%);
+    color: #fff;
+    font-size: 0.9rem;
+    background: rgba(0, 0, 0, 0.4);
+    padding: 0.25rem 0.9rem;
+    border-radius: 999px;
+  }
+  @media (max-width: 640px) {
+    .lb-nav {
+      width: 42px;
+      height: 42px;
+      font-size: 1.6rem;
+    }
+  }
+</style>
+
+<script>
+  const deck = document.getElementById('deck');
+  const lb = document.getElementById('lightbox');
+  const lbImg = document.getElementById('lbImg') as HTMLImageElement;
+  const lbCount = document.getElementById('lbCount');
+  const imgs = Array.from(deck?.querySelectorAll('img') ?? []) as HTMLImageElement[];
+  let idx = 0;
+
+  const show = (i: number) => {
+    idx = (i + imgs.length) % imgs.length;
+    if (lbImg) lbImg.src = imgs[idx].src;
+    if (lbCount) lbCount.textContent = `${idx + 1} / ${imgs.length}`;
+  };
+  const open = (i: number) => {
+    show(i);
+    lb?.classList.add('open');
+    lb?.setAttribute('aria-hidden', 'false');
+    document.body.style.overflow = 'hidden';
+  };
+  const close = () => {
+    lb?.classList.remove('open');
+    lb?.setAttribute('aria-hidden', 'true');
+    document.body.style.overflow = '';
+  };
+
+  imgs.forEach((img, i) => img.addEventListener('click', () => open(i)));
+  document.getElementById('lbClose')?.addEventListener('click', close);
+  document.getElementById('lbPrev')?.addEventListener('click', () => show(idx - 1));
+  document.getElementById('lbNext')?.addEventListener('click', () => show(idx + 1));
+  lb?.addEventListener('click', (e) => {
+    if (e.target === lb) close();
+  });
+  document.addEventListener('keydown', (e) => {
+    if (!lb?.classList.contains('open')) return;
+    if (e.key === 'Escape') close();
+    else if (e.key === 'ArrowLeft') show(idx - 1);
+    else if (e.key === 'ArrowRight') show(idx + 1);
+  });
+</script>

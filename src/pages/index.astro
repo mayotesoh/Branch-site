@@ -4,6 +4,7 @@ import LineButton from '../components/LineButton.astro';
 
 const base = import.meta.env.BASE_URL;
 const joinUrl = `${base.replace(/\/$/, '')}/join`;
+const aboutUrl = `${base.replace(/\/$/, '')}/about`;
 
 const features = [
   {
@@ -68,6 +69,9 @@ const steps = [
           一人で続けるのは難しくても、仲間がいれば前に進めます。
           Branchは知識のインプットだけでなく、実践・相談・つながりまでを大切にする教育コミュニティです。
         </p>
+      </div>
+      <div class="about-more">
+        <a class="btn btn-primary" href={aboutUrl}>コミュニティ紹介（提案資料）を見る →</a>
       </div>
     </div>
   </section>
@@ -162,6 +166,10 @@ const steps = [
     max-width: 760px;
     margin-inline: auto;
     color: var(--color-text-muted);
+  }
+  .about-more {
+    text-align: center;
+    margin-top: 2rem;
   }
 
   .feature-grid {
