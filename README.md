@@ -41,6 +41,7 @@ npm run preview    # ビルド結果をローカルで確認
 | [予約システム仕様書](docs/予約システム仕様書.md) | 構成・データ仕様・API・LINE対話フロー |
 | [使用マニュアル](docs/使用マニュアル.md) | 予約方法・運営手順・トラブルシューティング |
 | [Notion連携設計](docs/notion連携設計.md) | ブログ・講座・予約のNotion連携方針とDB設計 |
+| [運営・講師マニュアル](docs/運営・講師マニュアル.md) | 権限の渡し方・ブログの書き方・会員/講座/予約の運用 |
 | [GAS README](gas/README.md) | Apps Script のセットアップ手順 |
 
 ## GitHub Pages へのデプロイ
