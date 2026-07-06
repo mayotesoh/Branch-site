@@ -147,9 +147,24 @@ export interface Course {
 
 let _courses: Promise<Course[]> | null = null;
 
+// 講師DB全件（公開/非公開問わず）から pageId → 氏名 のマップ
+let _instrMap: Promise<Map<string, string>> | null = null;
+function getInstructorMap(): Promise<Map<string, string>> {
+  if (!_instrMap) {
+    _instrMap = (async () => {
+      const rows = await queryAll(INSTR_DB);
+      const m = new Map<string, string>();
+      for (const r of rows) m.set(r.id, pText(r.properties['名前']));
+      return m;
+    })();
+  }
+  return _instrMap;
+}
+
 export function getCourses(): Promise<Course[]> {
   if (!_courses) {
     _courses = (async () => {
+      const instrMap = await getInstructorMap();
       const rows = await queryAll(COURSE_DB, {
         filter: { property: '公開', checkbox: { equals: true } },
         sorts: [{ property: '表示順', direction: 'ascending' }],
@@ -176,7 +191,10 @@ export function getCourses(): Promise<Course[]> {
             name: pText(p['講座名']),
             type,
             category: pSelect(p['カテゴリ']),
-            instructor: pText(p['担当講師名']),
+            instructor: pRelIds(p['担当講師'])
+              .map((id: string) => instrMap.get(id))
+              .filter(Boolean)
+              .join(' / '),
             courseName: pText(p['コース名']),
             desc: pText(p['説明']),
             period: pText(p['期間・時間']),
