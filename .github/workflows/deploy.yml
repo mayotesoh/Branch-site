@@ -6,10 +6,11 @@ on:
     branches: [main]
   # Actions タブから手動実行も可能（Notionの内容を「今すぐ反映」）
   workflow_dispatch:
-  # Notionの更新を定期的に取り込む（UTC。日本時間の朝9時・夜21時）
+  # Notionの更新を定期的に取り込む（1時間ごと。UTC=JST共通で毎時00分）
+  # ※ GitHubのスケジュールはベストエフォートのため数分〜十数分の遅延あり。
+  #   即時反映したい場合は Actions の「Run workflow」(workflow_dispatch) を使う。
   schedule:
-    - cron: '0 0 * * *'
-    - cron: '0 12 * * *'
+    - cron: '0 * * * *'
 
 # GitHub Pages へのデプロイに必要な権限
 permissions:
