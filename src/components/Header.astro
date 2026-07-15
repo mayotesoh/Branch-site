@@ -82,11 +82,14 @@ const links = [
   }
   .nav {
     display: flex;
-    gap: 1.5rem;
-    font-size: 0.92rem;
+    align-items: center;
+    flex-wrap: nowrap;
+    gap: 0.8rem;
+    font-size: 0.84rem;
   }
   .nav a {
     color: var(--color-text-muted);
+    white-space: nowrap;
   }
   .nav a:hover {
     color: var(--color-accent-soft);
@@ -123,7 +126,7 @@ const links = [
     transition: transform 0.25s ease, opacity 0.25s ease;
   }
 
-  @media (max-width: 860px) {
+  @media (max-width: 1100px) {
     .nav-toggle {
       display: flex;
     }
