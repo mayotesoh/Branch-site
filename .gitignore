@@ -28,3 +28,6 @@ pnpm-debug.log*
 
 # claude local settings
 .claude/settings.local.json
+
+# 引き継ぎメモ（内部用・公開しない）
+HANDOFF.md
