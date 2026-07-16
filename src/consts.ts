@@ -7,7 +7,7 @@
  * ※ base が異なるため相手サイトへは絶対URLでリンクする。
  */
 export const SISTER_SITE_URL = 'https://mayotesoh.github.io/fortune-lab/';
-export const SISTER_SITE_NAME = 'Fortune Lab';
+export const SISTER_SITE_NAME = 'Fortune Lab☆！';
 export const SISTER_SITE_DESC = '占い鑑定';
 
 /** 公式LINE 友だち追加・予約・相談リンク */
