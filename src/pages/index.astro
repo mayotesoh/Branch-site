@@ -42,7 +42,7 @@ const steps = [
     <div class="container hero-inner">
       <p class="hero-eyebrow">占い師のための教育コミュニティ</p>
       <h1 class="hero-title">
-        Branch ─<br />稼げる占い師を育成する場所。
+        Branch ─<br />稼げる占い師を<wbr />育成する場所。
       </h1>
       <p class="hero-lead">
         Branch（ブランチ）は、占いを「仕事」にして稼げる占い師を育てる教育コミュニティです。<br />
@@ -141,6 +141,10 @@ const steps = [
   .hero-title {
     font-size: clamp(2rem, 6vw, 3.4rem);
     margin-bottom: 1.5rem;
+    /* 日本語見出しを文字単位で割らず、<wbr> の位置でだけ折り返す */
+    word-break: keep-all;
+    line-break: strict;
+    overflow-wrap: normal;
   }
   .hero-lead {
     color: var(--color-text-muted);
