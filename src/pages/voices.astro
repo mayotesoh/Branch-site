@@ -1,0 +1,259 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { LINE_URL } from '../consts';
+import { getVoices } from '../lib/notion';
+
+const base = import.meta.env.BASE_URL;
+const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+const voices = await getVoices();
+---
+
+<Layout
+  title="会員の声・実績｜Branch"
+  description="Branch で学んだ会員の声と実績をご紹介します。占いを仕事にして収入を得るまでのリアルな道のりをご覧ください。"
+>
+  <!-- Hero -->
+  <section class="voices-hero">
+    <div class="container">
+      <p class="eyebrow">会員の声・実績</p>
+      <h1 class="hero-title">学んだ人が、<br />どう変わったか。</h1>
+      <p class="hero-lead">
+        占いを「仕事」にするまでの道のりは、人それぞれです。<br />
+        Branch で学んだ仲間たちのリアルな声をご覧ください。
+      </p>
+    </div>
+  </section>
+
+  <!-- 声の一覧 -->
+  <section class="section">
+    <div class="container">
+      {
+        voices.length === 0 ? (
+          <div class="empty-box">
+            <p class="empty-title">会員の声は準備中です</p>
+            <p class="empty-desc">
+              受講生の感想と実績を、順次掲載してまいります。<br />
+              先に講座の内容をご覧になりたい方はこちらから。
+            </p>
+            <div class="empty-actions">
+              <a class="btn btn-primary" href={link('/courses')}>講座を見る</a>
+              {LINE_URL && (
+                <a class="btn btn-ghost" href={LINE_URL} target="_blank" rel="noopener noreferrer">
+                  LINEで相談する
+                </a>
+              )}
+            </div>
+          </div>
+        ) : (
+          <div class="voice-grid">
+            {voices.map((v) => (
+              <article class="voice-card">
+                <div class="voice-head">
+                  <div class="voice-photo">
+                    {v.image ? (
+                      <img src={v.image} alt={`${v.name}さんの写真`} loading="lazy" />
+                    ) : (
+                      <span class="voice-noimg">✦</span>
+                    )}
+                  </div>
+                  <div class="voice-who">
+                    <h2 class="voice-name">{v.name}</h2>
+                    {v.role && <p class="voice-role">{v.role}</p>}
+                  </div>
+                </div>
+
+                {v.result && <p class="voice-result">{v.result}</p>}
+                {v.comment && <p class="voice-comment">{v.comment}</p>}
+
+                {v.courses.length > 0 && (
+                  <div class="voice-courses">
+                    <span class="voice-courses-label">受講した講座</span>
+                    <ul>
+                      {v.courses.map((c) => (
+                        <li>{c}</li>
+                      ))}
+                    </ul>
+                  </div>
+                )}
+              </article>
+            ))}
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  <!-- CTA -->
+  <section class="section cta-section">
+    <div class="container cta-inner">
+      <h2>次は、あなたの番です。</h2>
+      <p>基礎から実践、そして収益化まで。仲間と一緒に一歩ずつ進めます。</p>
+      <div class="cta-actions">
+        <a class="btn btn-primary" href={link('/courses')}>講座を見る</a>
+        <a class="btn btn-ghost" href={link('/apply')}>申し込む</a>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .voices-hero {
+    background: var(--color-bg-soft);
+    border-bottom: 1px solid var(--color-border);
+    padding-block: 4.5rem 3.5rem;
+    text-align: center;
+  }
+  .eyebrow {
+    color: var(--color-accent-soft);
+    letter-spacing: 0.24em;
+    font-size: 0.8rem;
+    font-weight: 700;
+    margin-bottom: 1rem;
+  }
+  .hero-title {
+    font-size: clamp(1.9rem, 5.5vw, 3rem);
+    margin-bottom: 1.2rem;
+    word-break: keep-all;
+    line-break: strict;
+  }
+  .hero-lead {
+    color: var(--color-text-muted);
+    max-width: 620px;
+    margin-inline: auto;
+  }
+
+  .voice-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.6rem;
+  }
+  .voice-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 1.8rem;
+    display: grid;
+    gap: 1rem;
+    align-content: start;
+    transition: transform 0.15s ease, box-shadow 0.2s ease;
+  }
+  .voice-card:hover {
+    transform: translateY(-3px);
+    box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, 0.06));
+  }
+  .voice-head {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+  }
+  .voice-photo {
+    width: 64px;
+    height: 64px;
+    flex-shrink: 0;
+    border-radius: 50%;
+    overflow: hidden;
+    background: var(--color-bg-soft);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .voice-photo img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+  }
+  .voice-noimg {
+    color: var(--color-accent);
+    font-size: 1.5rem;
+  }
+  .voice-name {
+    font-size: 1.15rem;
+    margin: 0;
+  }
+  .voice-role {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    margin: 0.15rem 0 0;
+  }
+  .voice-result {
+    background: linear-gradient(135deg, var(--color-bg-soft), var(--color-surface));
+    border: 1px solid var(--color-accent);
+    border-radius: 10px;
+    padding: 0.7rem 1rem;
+    margin: 0;
+    font-weight: 700;
+    color: var(--color-accent-soft);
+    font-size: 0.95rem;
+  }
+  .voice-comment {
+    margin: 0;
+    color: var(--color-text);
+    font-size: 0.95rem;
+    white-space: pre-wrap;
+  }
+  .voice-courses {
+    border-top: 1px solid var(--color-border);
+    padding-top: 0.9rem;
+  }
+  .voice-courses-label {
+    display: block;
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.4rem;
+  }
+  .voice-courses ul {
+    list-style: none;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    padding: 0;
+    margin: 0;
+  }
+  .voice-courses li {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.78rem;
+  }
+
+  .empty-box {
+    text-align: center;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 3rem 2rem;
+    max-width: 560px;
+    margin-inline: auto;
+  }
+  .empty-title {
+    font-family: var(--font-serif);
+    font-size: 1.2rem;
+    margin-bottom: 0.8rem;
+  }
+  .empty-desc {
+    color: var(--color-text-muted);
+    margin-bottom: 1.8rem;
+  }
+  .empty-actions,
+  .cta-actions {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .cta-section {
+    background: var(--color-bg-soft);
+    border-top: 1px solid var(--color-border);
+    text-align: center;
+  }
+  .cta-inner h2 {
+    font-size: clamp(1.5rem, 4vw, 2.1rem);
+    margin-bottom: 0.8rem;
+  }
+  .cta-inner p {
+    color: var(--color-text-muted);
+    margin-bottom: 1.8rem;
+  }
+</style>

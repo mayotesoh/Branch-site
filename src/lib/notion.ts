@@ -6,6 +6,7 @@ import { marked } from 'marked';
 export const BLOG_DB = '04e8f32855ae4e80865ab3f2b92798cb';
 export const INSTR_DB = '30e989297ce14ea99cbea84a2e5e2180';
 export const COURSE_DB = '9e653e0af59e47ebb3c1c9d443339e48';
+export const VOICE_DB = '3a776a170aae81e88abbd889d401e589';
 
 const token =
   (import.meta.env as any).NOTION_TOKEN ?? process.env.NOTION_TOKEN;
@@ -230,4 +231,52 @@ export async function getPostHtml(slug: string): Promise<string> {
   const mdblocks = await n2m.pageToMarkdown(post._pageId);
   const md = n2m.toMarkdownString(mdblocks).parent ?? '';
   return await marked.parse(md);
+}
+
+// ---- 会員の声（受講生の感想・実績） ----
+export interface Voice {
+  name: string;
+  role: string;
+  image: string;
+  result: string;
+  comment: string;
+  courses: string[];
+  order: number;
+}
+
+let _voices: Promise<Voice[]> | null = null;
+
+/** 掲載許可＋公開の両方にチェックがある声だけを表示順で返す */
+export function getVoices(): Promise<Voice[]> {
+  if (!_voices) {
+    _voices = (async () => {
+      const rows = await queryAll(VOICE_DB, {
+        filter: {
+          and: [
+            { property: '公開', checkbox: { equals: true } },
+            { property: '掲載許可', checkbox: { equals: true } },
+          ],
+        },
+        sorts: [{ property: '表示順', direction: 'ascending' }],
+      });
+      // 受講講座（リレーション）→ 講座名
+      const courses = await getCourses();
+      const courseMap = new Map(courses.map((c) => [c.pageId, c.name]));
+      return rows.map((r) => {
+        const p = r.properties;
+        return {
+          name: pText(p['表示名']),
+          role: pText(p['肩書き']),
+          image: pFile(p['顔写真']),
+          result: pText(p['実績']),
+          comment: pText(p['感想']),
+          courses: pRelIds(p['受講講座'])
+            .map((id: string) => courseMap.get(id))
+            .filter(Boolean) as string[],
+          order: p['表示順']?.number ?? 0,
+        } as Voice;
+      });
+    })();
+  }
+  return _voices;
 }
