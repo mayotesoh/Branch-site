@@ -1,0 +1,281 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { GAS_URL } from '../consts';
+---
+
+<Layout title="対面決済（スタッフ用）｜Branch" description="現場でQRを表示して決済するスタッフ用ページです。">
+  <section class="section">
+    <div class="container narrow" data-gas={GAS_URL} id="root">
+      <h1 class="page-title">対面決済</h1>
+      <p class="page-lead">
+        品目と金額を入力すると<strong>QRコード</strong>が表示されます。<br />
+        お客様のスマホで読み取っていただくとお支払いに進みます。
+      </p>
+
+      <!-- 入力 -->
+      <form id="pay-form" class="pay-form">
+        <div class="field">
+          <label for="item">品目<span class="req">必須</span></label>
+          <input type="text" id="item" placeholder="例：タロット鑑定30分" autocomplete="off" required />
+        </div>
+        <div class="field">
+          <label for="amount">金額（円）<span class="req">必須</span></label>
+          <input type="number" id="amount" placeholder="3000" min="100" max="300000" step="100" inputmode="numeric" required />
+        </div>
+        <div class="field">
+          <label for="staff">担当<span class="opt">任意</span></label>
+          <input type="text" id="staff" placeholder="担当者名" autocomplete="off" />
+        </div>
+        <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">QRコードを表示</button>
+        <p id="result" class="result" role="status" aria-live="polite"></p>
+      </form>
+
+      <!-- QR表示 -->
+      <div id="qr-panel" class="qr-panel" hidden>
+        <p class="qr-item"><span id="qr-item"></span></p>
+        <p class="qr-amount" id="qr-amount"></p>
+        <div id="qr" class="qr"></div>
+        <p class="qr-help">お客様のカメラで読み取ってください</p>
+        <p id="qr-status" class="qr-status">お支払いをお待ちしています…</p>
+        <button type="button" id="reset-btn" class="btn btn-ghost">別の会計をする</button>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script>
+  import qrcode from 'qrcode-generator';
+
+  const root = document.getElementById('root');
+  const GAS_URL = root?.dataset.gas || '';
+  const form = document.getElementById('pay-form') as HTMLFormElement;
+  const submitBtn = document.getElementById('submit-btn') as HTMLButtonElement;
+  const resultEl = document.getElementById('result')!;
+  const panel = document.getElementById('qr-panel')!;
+  const qrBox = document.getElementById('qr')!;
+  const statusEl = document.getElementById('qr-status')!;
+  const resetBtn = document.getElementById('reset-btn')!;
+
+  let timer: number | undefined;
+
+  const show = (msg: string, type?: string) => {
+    resultEl.textContent = msg;
+    resultEl.className = 'result ' + (type || '');
+  };
+
+  function drawQR(text: string) {
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    qrBox.innerHTML = qr.createSvgTag({ cellSize: 6, margin: 2, scalable: true });
+  }
+
+  async function poll(sessionId: string) {
+    try {
+      const res = await fetch(
+        GAS_URL + '?action=offline_status&session_id=' + encodeURIComponent(sessionId)
+      );
+      const data = await res.json();
+      if (data.status === 'paid') {
+        clearInterval(timer);
+        statusEl.textContent = '✓ お支払いが完了しました';
+        statusEl.className = 'qr-status paid';
+        qrBox.classList.add('done');
+      } else if (data.status === 'expired') {
+        clearInterval(timer);
+        statusEl.textContent = '期限切れです。もう一度やり直してください。';
+        statusEl.className = 'qr-status expired';
+      }
+    } catch (_) {
+      /* 一時的な通信エラーは無視して次回に再試行 */
+    }
+  }
+
+  form?.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    show('', '');
+    const item = (document.getElementById('item') as HTMLInputElement).value.trim();
+    const amount = Number((document.getElementById('amount') as HTMLInputElement).value);
+    const staff = (document.getElementById('staff') as HTMLInputElement).value.trim();
+    if (!item || !amount) {
+      show('品目と金額を入力してください。', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '準備中…';
+    try {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'offline_checkout', item, amount, staff }),
+      });
+      const data = await res.json();
+      if (data.status === 'created' && data.url) {
+        drawQR(data.url);
+        document.getElementById('qr-item')!.textContent = data.item;
+        document.getElementById('qr-amount')!.textContent =
+          '¥' + Number(data.amount).toLocaleString('ja-JP');
+        statusEl.textContent = 'お支払いをお待ちしています…';
+        statusEl.className = 'qr-status';
+        qrBox.classList.remove('done');
+        form.hidden = true;
+        panel.hidden = false;
+        timer = window.setInterval(() => poll(data.sessionId), 3000);
+      } else {
+        show(data.message || 'QRを生成できませんでした。', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      show('通信に失敗しました。電波状況をご確認ください。', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = 'QRコードを表示';
+    }
+  });
+
+  resetBtn?.addEventListener('click', () => {
+    clearInterval(timer);
+    panel.hidden = true;
+    form.hidden = false;
+    form.reset();
+    show('', '');
+  });
+</script>
+
+<style>
+  .narrow {
+    max-width: 460px;
+  }
+  .page-title {
+    font-size: clamp(1.7rem, 5vw, 2.2rem);
+    margin-bottom: 0.8rem;
+  }
+  .page-lead {
+    color: var(--color-text-muted);
+    margin-bottom: 1.8rem;
+    font-size: 0.95rem;
+  }
+  .pay-form {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 1.8rem;
+    display: grid;
+    gap: 1.2rem;
+    box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, 0.06));
+  }
+  .field {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .req,
+  .opt {
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 0.05rem 0.4rem;
+  }
+  .req {
+    color: #fff;
+    background: var(--color-primary);
+  }
+  .opt {
+    color: var(--color-text-muted);
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+  }
+  .field input {
+    width: 100%;
+    padding: 0.85rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 1.05rem;
+    font-family: inherit;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(111, 168, 69, 0.18);
+  }
+  .submit-btn {
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .result {
+    margin: 0;
+    text-align: center;
+    font-size: 0.9rem;
+    min-height: 1.2em;
+  }
+  .result.error {
+    color: #d9534f;
+  }
+
+  .qr-panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 2rem 1.5rem;
+    text-align: center;
+    box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, 0.06));
+  }
+  .qr-item {
+    color: var(--color-text-muted);
+    margin: 0 0 0.2rem;
+    font-size: 0.95rem;
+  }
+  .qr-amount {
+    font-size: 2rem;
+    font-weight: 700;
+    color: var(--color-primary-soft);
+    margin: 0 0 1.2rem;
+  }
+  .qr {
+    width: 240px;
+    max-width: 100%;
+    margin: 0 auto 1rem;
+    padding: 0.6rem;
+    background: #fff;
+    border-radius: 12px;
+    transition: opacity 0.3s ease;
+  }
+  .qr :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .qr.done {
+    opacity: 0.25;
+  }
+  .qr-help {
+    color: var(--color-text-muted);
+    font-size: 0.85rem;
+    margin: 0 0 1rem;
+  }
+  .qr-status {
+    font-size: 0.95rem;
+    color: var(--color-text-muted);
+    margin: 0 0 1.5rem;
+  }
+  .qr-status.paid {
+    color: var(--color-primary-soft);
+    font-weight: 700;
+    font-size: 1.15rem;
+  }
+  .qr-status.expired {
+    color: #d9534f;
+  }
+</style>

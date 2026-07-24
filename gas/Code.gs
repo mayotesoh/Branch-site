@@ -51,6 +51,11 @@ function doPost(e) {
       return handleCourseCheckout(data); // CoursePayment.gs
     }
 
+    // (E) 対面決済（現場QR）→ Checkout作成
+    if (data && data.action === 'offline_checkout') {
+      return handleOfflineCheckout(data); // OfflinePayment.gs
+    }
+
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);
   } catch (err) {
@@ -143,6 +148,9 @@ function doGet(e) {
     const params = (e && e.parameter) || {};
     if (params.action === 'course_confirm') {
       return confirmCourseCheckout((params.session_id || '').toString());
+    }
+    if (params.action === 'offline_status') {
+      return checkOfflineStatus((params.session_id || '').toString()); // OfflinePayment.gs
     }
     return jsonOutput({ status: 'ok', message: 'Branch 予約API は稼働中です。' });
   } catch (err) {

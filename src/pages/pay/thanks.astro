@@ -1,0 +1,48 @@
+---
+import Layout from '../../layouts/Layout.astro';
+---
+
+<Layout title="お支払いありがとうございました｜Branch" description="お支払い完了ページ">
+  <section class="section">
+    <div class="container narrow">
+      <div class="thanks-card">
+        <div class="check">✓</div>
+        <h1>お支払いありがとうございました</h1>
+        <p>お手続きが完了しました。<br />スタッフにこの画面をお見せください。</p>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .narrow {
+    max-width: 460px;
+  }
+  .thanks-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-primary);
+    border-radius: var(--radius, 14px);
+    padding: 3rem 2rem;
+    text-align: center;
+    box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, 0.06));
+  }
+  .check {
+    width: 64px;
+    height: 64px;
+    margin: 0 auto 1.2rem;
+    border-radius: 50%;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+  .thanks-card h1 {
+    font-size: clamp(1.3rem, 4vw, 1.7rem);
+    margin-bottom: 0.8rem;
+  }
+  .thanks-card p {
+    color: var(--color-text-muted);
+  }
+</style>
