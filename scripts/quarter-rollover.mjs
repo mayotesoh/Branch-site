@@ -17,7 +17,7 @@ import fs from 'node:fs';
 import path from 'node:path';
 
 const MEMBER_DB = 'ca1b82cb-70c3-4995-b15b-362181c387cd';
-const SCORE_DB = '3a776a17-0aae-81a0-8708-d1e6c4d245f7';
+const SCORE_DB = '3a776a17-0aae-80f5-9243-cab17a49a0d2';
 
 // 新規行を作らない会員ステータス
 const SKIP_STATUS = ['退会', '見込み'];
