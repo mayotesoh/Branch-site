@@ -10,6 +10,13 @@ export const SISTER_SITE_URL = 'https://mayotesoh.github.io/fortune-lab/';
 export const SISTER_SITE_NAME = 'Fortune Lab☆！';
 export const SISTER_SITE_DESC = '占い鑑定';
 
+/**
+ * Instagram プロフィールURL（「フォローはこちら」導線に使用）
+ * 例：'https://www.instagram.com/branch_uranai/'
+ * 空文字ならフォローボタンは表示されません。
+ */
+export const INSTAGRAM_URL = '';
+
 /** 公式LINE 友だち追加・予約・相談リンク */
 export const LINE_URL = 'https://lin.ee/SvCKDYoj';
 

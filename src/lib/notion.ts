@@ -6,6 +6,7 @@ import { marked } from 'marked';
 export const BLOG_DB = '04e8f32855ae4e80865ab3f2b92798cb';
 export const INSTR_DB = '30e989297ce14ea99cbea84a2e5e2180';
 export const COURSE_DB = '9e653e0af59e47ebb3c1c9d443339e48';
+export const INSTA_DB = '3a776a170aae818e8b00ea3294ee042f';
 export const VOICE_DB = '3a776a170aae81e88abbd889d401e589';
 
 const token =
@@ -279,4 +280,43 @@ export function getVoices(): Promise<Voice[]> {
     })();
   }
   return _voices;
+}
+
+// ---- Instagram 埋め込み投稿 ----
+export interface InstaPost {
+  title: string;
+  url: string;
+  shortcode: string; // 埋め込みURL生成に使う
+}
+
+/** 投稿URLから shortcode を取り出す（/p/ /reel/ /tv/ に対応） */
+function instaShortcode(url: string): string {
+  const m = String(url).match(/instagram\.com\/(?:p|reel|tv)\/([A-Za-z0-9_-]+)/);
+  return m ? m[1] : '';
+}
+
+let _insta: Promise<InstaPost[]> | null = null;
+
+/** 公開中のInstagram投稿（表示順）。埋め込み可能なものだけ返す */
+export function getInstaPosts(): Promise<InstaPost[]> {
+  if (!_insta) {
+    _insta = (async () => {
+      const rows = await queryAll(INSTA_DB, {
+        filter: { property: '公開', checkbox: { equals: true } },
+        sorts: [{ property: '表示順', direction: 'ascending' }],
+      });
+      return rows
+        .map((r) => {
+          const p = r.properties;
+          const url = p['投稿URL']?.url ?? '';
+          return {
+            title: pText(p['タイトル']),
+            url,
+            shortcode: instaShortcode(url),
+          } as InstaPost;
+        })
+        .filter((x) => x.shortcode);
+    })();
+  }
+  return _insta;
 }
