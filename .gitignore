@@ -35,3 +35,4 @@ HANDOFF.md
 # 会員の個人情報を含む内部資料（公開・コミット禁止）
 private/
 *.xlsx
+scratch_*.mjs
