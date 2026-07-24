@@ -1,0 +1,195 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { GAS_URL } from '../consts';
+---
+
+<Layout
+  title="出席チェックイン｜Branch"
+  description="Branch の定例会・講座の出席受付ページです。"
+>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="page-title">出席チェックイン</h1>
+      <p class="page-lead">
+        イベントの<strong>合言葉</strong>と<strong>お名前</strong>を入力して送信してください。<br />
+        出席が記録され、スコアに自動で反映されます。
+      </p>
+
+      <form id="checkin-form" class="checkin-form">
+        <div class="field">
+          <label for="code">合言葉<span class="req">必須</span></label>
+          <input
+            type="text"
+            id="code"
+            name="code"
+            placeholder="主催者から共有された合言葉"
+            autocomplete="off"
+            required
+          />
+        </div>
+
+        <div class="field">
+          <label for="name">お名前<span class="req">必須</span></label>
+          <input
+            type="text"
+            id="name"
+            name="name"
+            placeholder="会員登録しているお名前"
+            autocomplete="name"
+            required
+          />
+          <small class="hint">名簿と照合します。登録しているお名前（または占い師名）でご入力ください。</small>
+        </div>
+
+        <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
+          出席を登録する
+        </button>
+
+        <p id="result" class="result" role="status" aria-live="polite"></p>
+      </form>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ GAS_URL }}>
+  const form = document.getElementById('checkin-form');
+  const codeInput = document.getElementById('code');
+  const nameInput = document.getElementById('name');
+  const submitBtn = document.getElementById('submit-btn');
+  const resultEl = document.getElementById('result');
+
+  // QRから ?code=xxx で来た場合は合言葉を自動入力
+  (function prefill() {
+    const params = new URLSearchParams(window.location.search);
+    const code = params.get('code');
+    if (code) {
+      codeInput.value = code;
+      nameInput.focus();
+    }
+  })();
+
+  function show(message, type) {
+    resultEl.textContent = message;
+    resultEl.className = 'result ' + (type || '');
+  }
+
+  form.addEventListener('submit', async (ev) => {
+    ev.preventDefault();
+    show('', '');
+
+    const code = codeInput.value.trim();
+    const name = nameInput.value.trim();
+    if (!code || !name) {
+      show('合言葉とお名前を入力してください。', 'error');
+      return;
+    }
+
+    submitBtn.disabled = true;
+    submitBtn.textContent = '送信中…';
+    try {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'checkin', code, name }),
+      });
+      const data = await res.json();
+      if (data.status === 'success') {
+        show(`✓ ${data.message}`, 'success');
+        form.reset();
+      } else {
+        show(data.message || '登録できませんでした。', 'error');
+      }
+    } catch (e) {
+      console.error(e);
+      show('送信に失敗しました。通信環境をご確認ください。', 'error');
+    } finally {
+      submitBtn.disabled = false;
+      submitBtn.textContent = '出席を登録する';
+    }
+  });
+</script>
+
+<style>
+  .narrow {
+    max-width: 480px;
+  }
+  .page-title {
+    font-size: clamp(1.8rem, 5vw, 2.4rem);
+    margin-bottom: 1rem;
+  }
+  .page-lead {
+    color: var(--color-text-muted);
+    margin-bottom: 2rem;
+  }
+  .checkin-form {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 2rem;
+    display: grid;
+    gap: 1.3rem;
+    box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, 0.06));
+  }
+  .field {
+    display: grid;
+    gap: 0.45rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .req {
+    font-size: 0.68rem;
+    font-weight: 700;
+    color: #fff;
+    background: var(--color-primary);
+    border-radius: 4px;
+    padding: 0.05rem 0.4rem;
+  }
+  .field input {
+    width: 100%;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(111, 168, 69, 0.18);
+  }
+  .hint {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+  }
+  .submit-btn {
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .submit-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+  }
+  .result {
+    margin: 0;
+    text-align: center;
+    font-size: 0.95rem;
+    min-height: 1.2em;
+  }
+  .result.success {
+    color: var(--color-primary-soft);
+    font-weight: 700;
+  }
+  .result.error {
+    color: #d9534f;
+  }
+</style>

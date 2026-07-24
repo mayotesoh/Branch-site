@@ -41,6 +41,11 @@ function doPost(e) {
       return jsonOutput({ status: 'ok' }); // LINEには200を返せばOK
     }
 
+    // (C) 出席受付（合言葉フォーム）→ 参加記録＋スコア自動集計
+    if (data && data.action === 'checkin') {
+      return handleCheckin(data); // Attendance.gs
+    }
+
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);
   } catch (err) {
