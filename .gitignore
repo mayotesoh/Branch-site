@@ -31,3 +31,7 @@ pnpm-debug.log*
 
 # 引き継ぎメモ（内部用・公開しない）
 HANDOFF.md
+
+# 会員の個人情報を含む内部資料（公開・コミット禁止）
+private/
+*.xlsx
