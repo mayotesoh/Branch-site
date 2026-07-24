@@ -1,0 +1,321 @@
+---
+import Layout from '../../layouts/Layout.astro';
+
+// 出席ページの絶対URL（QR・リンクの土台）
+const base = import.meta.env.BASE_URL;
+const checkinPath = `${base.replace(/\/$/, '')}/checkin`;
+---
+
+<Layout
+  title="出席受付ツール（主催者用）｜Branch"
+  description="イベントの出席受付QR・リンクを発行するツールです。"
+>
+  <section class="section">
+    <div class="container narrow" id="root" data-path={checkinPath}>
+      <h1 class="page-title">出席受付ツール</h1>
+      <p class="page-lead">
+        イベントの<strong>合言葉</strong>を入れると、出席用の<strong>QRコード</strong>と<strong>リンク</strong>が出ます。<br />
+        対面はQRを見せる／オンラインはリンクをチャットに貼るだけ。
+      </p>
+
+      <form id="qr-form" class="qr-form">
+        <div class="field">
+          <label for="code">合言葉<span class="req">必須</span></label>
+          <input type="text" id="code" placeholder="イベントDBで設定した合言葉" autocomplete="off" required />
+          <small class="hint">Notionの「Branch イベントDB」で設定し、受付中にした合言葉を入れます。</small>
+        </div>
+        <div class="field">
+          <label for="title">イベント名<span class="opt">任意</span></label>
+          <input type="text" id="title" placeholder="例：7月定例会（表示用）" autocomplete="off" />
+        </div>
+        <button type="submit" class="btn btn-primary submit-btn">QR・リンクを表示</button>
+      </form>
+
+      <div id="out" class="out" hidden>
+        <p class="out-title" id="out-title"></p>
+        <div id="qr" class="qr"></div>
+
+        <div class="link-row">
+          <input type="text" id="link" class="link-input" readonly />
+          <button type="button" id="copy-btn" class="btn btn-ghost copy-btn">コピー</button>
+        </div>
+
+        <div class="tips">
+          <p>📱 <strong>対面イベント</strong>：QRを画面に出す／印刷して掲示 → 参加者がスマホで読み取り</p>
+          <p>💻 <strong>オンライン</strong>：「コピー」でリンクをコピー → Zoom・LINEのチャットに貼り付け</p>
+        </div>
+
+        <div class="actions">
+          <button type="button" id="big-btn" class="btn btn-gold">🔍 大きく表示（掲示用）</button>
+          <button type="button" id="again-btn" class="btn btn-ghost">別のイベント</button>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- 掲示用フルスクリーン -->
+  <div id="overlay" class="overlay" hidden>
+    <button type="button" id="close-btn" class="close-btn" aria-label="閉じる">✕</button>
+    <p id="ov-title" class="ov-title"></p>
+    <div id="ov-qr" class="ov-qr"></div>
+    <p class="ov-help">スマホのカメラで読み取って出席してください</p>
+  </div>
+</Layout>
+
+<script>
+  import qrcode from 'qrcode-generator';
+
+  const root = document.getElementById('root')!;
+  const checkinPath = root.dataset.path || '/checkin';
+  const form = document.getElementById('qr-form') as HTMLFormElement;
+  const out = document.getElementById('out')!;
+  const qrBox = document.getElementById('qr')!;
+  const linkInput = document.getElementById('link') as HTMLInputElement;
+  const outTitle = document.getElementById('out-title')!;
+  const copyBtn = document.getElementById('copy-btn')!;
+  const bigBtn = document.getElementById('big-btn')!;
+  const againBtn = document.getElementById('again-btn')!;
+  const overlay = document.getElementById('overlay')!;
+  const ovQr = document.getElementById('ov-qr')!;
+  const ovTitle = document.getElementById('ov-title')!;
+  const closeBtn = document.getElementById('close-btn')!;
+
+  let currentUrl = '';
+
+  function makeSvg(text: string, cellSize: number) {
+    const qr = qrcode(0, 'M');
+    qr.addData(text);
+    qr.make();
+    return qr.createSvgTag({ cellSize, margin: 2, scalable: true });
+  }
+
+  form.addEventListener('submit', (ev) => {
+    ev.preventDefault();
+    const code = (document.getElementById('code') as HTMLInputElement).value.trim();
+    const title = (document.getElementById('title') as HTMLInputElement).value.trim();
+    if (!code) return;
+
+    currentUrl = window.location.origin + checkinPath + '?code=' + encodeURIComponent(code);
+    qrBox.innerHTML = makeSvg(currentUrl, 6);
+    linkInput.value = currentUrl;
+    outTitle.textContent = title ? '「' + title + '」の出席受付' : '出席受付';
+    ovTitle.textContent = title || '出席受付';
+    out.hidden = false;
+    out.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+
+  copyBtn.addEventListener('click', async () => {
+    try {
+      await navigator.clipboard.writeText(currentUrl);
+      copyBtn.textContent = '✓ コピーしました';
+      setTimeout(() => (copyBtn.textContent = 'コピー'), 1800);
+    } catch (_) {
+      linkInput.select(); // フォールバック：手動コピー用に選択状態にする
+      document.execCommand && document.execCommand('copy');
+    }
+  });
+
+  bigBtn.addEventListener('click', () => {
+    ovQr.innerHTML = makeSvg(currentUrl, 10);
+    overlay.hidden = false;
+    document.body.style.overflow = 'hidden';
+  });
+  const closeOverlay = () => {
+    overlay.hidden = true;
+    document.body.style.overflow = '';
+  };
+  closeBtn.addEventListener('click', closeOverlay);
+  document.addEventListener('keydown', (e) => {
+    if (e.key === 'Escape' && !overlay.hidden) closeOverlay();
+  });
+
+  againBtn.addEventListener('click', () => {
+    out.hidden = true;
+    form.reset();
+    (document.getElementById('code') as HTMLInputElement).focus();
+  });
+</script>
+
+<style>
+  .narrow {
+    max-width: 480px;
+  }
+  .page-title {
+    font-size: clamp(1.7rem, 5vw, 2.2rem);
+    margin-bottom: 0.8rem;
+  }
+  .page-lead {
+    color: var(--color-text-muted);
+    margin-bottom: 1.8rem;
+    font-size: 0.95rem;
+  }
+  .qr-form {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 1.8rem;
+    display: grid;
+    gap: 1.2rem;
+    box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, 0.06));
+  }
+  .field {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .field label {
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .req,
+  .opt {
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 0.05rem 0.4rem;
+  }
+  .req {
+    color: #fff;
+    background: var(--color-primary);
+  }
+  .opt {
+    color: var(--color-text-muted);
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+  }
+  .field input {
+    width: 100%;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(111, 168, 69, 0.18);
+  }
+  .hint {
+    color: var(--color-text-muted);
+    font-size: 0.78rem;
+  }
+  .submit-btn {
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+
+  .out {
+    margin-top: 1.6rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 1.8rem;
+    text-align: center;
+    box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, 0.06));
+  }
+  .out-title {
+    font-weight: 700;
+    margin: 0 0 1rem;
+  }
+  .qr {
+    width: 220px;
+    max-width: 80%;
+    margin: 0 auto 1.2rem;
+    padding: 0.6rem;
+    background: #fff;
+    border-radius: 12px;
+  }
+  .qr :global(svg),
+  .ov-qr :global(svg) {
+    width: 100%;
+    height: auto;
+    display: block;
+  }
+  .link-row {
+    display: flex;
+    gap: 0.5rem;
+    margin-bottom: 1.2rem;
+  }
+  .link-input {
+    flex: 1;
+    min-width: 0;
+    padding: 0.6rem 0.7rem;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    background: var(--color-bg-soft);
+    color: var(--color-text);
+    font-size: 0.82rem;
+    font-family: inherit;
+  }
+  .copy-btn {
+    flex-shrink: 0;
+    white-space: nowrap;
+  }
+  .tips {
+    text-align: left;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 0.9rem 1.1rem;
+    margin-bottom: 1.3rem;
+  }
+  .tips p {
+    margin: 0.3rem 0;
+    font-size: 0.86rem;
+    color: var(--color-text);
+  }
+  .actions {
+    display: flex;
+    gap: 0.6rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  .overlay {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    background: #fff;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: center;
+    padding: 1.5rem;
+  }
+  .close-btn {
+    position: absolute;
+    top: 1rem;
+    right: 1.2rem;
+    width: 44px;
+    height: 44px;
+    border: none;
+    background: var(--color-bg-soft);
+    border-radius: 50%;
+    font-size: 1.2rem;
+    cursor: pointer;
+  }
+  .ov-title {
+    font-family: var(--font-serif);
+    font-size: clamp(1.3rem, 4vw, 2rem);
+    font-weight: 700;
+    margin-bottom: 1.5rem;
+    text-align: center;
+  }
+  .ov-qr {
+    width: min(70vh, 90vw);
+    padding: 1rem;
+    background: #fff;
+  }
+  .ov-help {
+    margin-top: 1.5rem;
+    color: var(--color-text-muted);
+    font-size: 1.05rem;
+  }
+</style>
