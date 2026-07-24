@@ -46,6 +46,11 @@ function doPost(e) {
       return handleCheckin(data); // Attendance.gs
     }
 
+    // (D) 講座の申込・決済 → 受講履歴＋得点に自動反映
+    if (data && data.action === 'course_checkout') {
+      return handleCourseCheckout(data); // CoursePayment.gs
+    }
+
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);
   } catch (err) {
@@ -129,10 +134,23 @@ function resetHeaders() {
 }
 
 /**
- * GET: 動作確認用
+ * GET エントリーポイント
+ *   ?action=course_confirm&session_id=... … 講座決済の入金確認（CoursePayment.gs）
+ *   （それ以外）… 動作確認メッセージ
  */
-function doGet() {
-  return jsonOutput({ status: 'ok', message: 'Branch 予約API は稼働中です。' });
+function doGet(e) {
+  try {
+    const params = (e && e.parameter) || {};
+    if (params.action === 'course_confirm') {
+      return confirmCourseCheckout((params.session_id || '').toString());
+    }
+    return jsonOutput({ status: 'ok', message: 'Branch 予約API は稼働中です。' });
+  } catch (err) {
+    return jsonOutput({
+      status: 'error',
+      message: (err && err.message) ? err.message : String(err),
+    });
+  }
 }
 
 /**

@@ -130,6 +130,7 @@ export function getPosts(): Promise<PostMeta[]> {
 
 // ---- 講座 ----
 export interface Course {
+  pageId: string; // 申込フォームから講座を指定するのに使う
   name: string;
   type: string; // 養成講座 / セッション
   category: string;
@@ -143,6 +144,11 @@ export interface Course {
   extra: string;
   order: number;
   curriculum: string[];
+  /** オンライン申込の対象か */
+  payable: boolean;
+  /** 価格（円）。未設定は 0 */
+  memberPrice: number;
+  nonMemberPrice: number;
 }
 
 let _courses: Promise<Course[]> | null = null;
@@ -188,6 +194,7 @@ export function getCourses(): Promise<Course[]> {
               );
           }
           return {
+            pageId: r.id,
             name: pText(p['講座名']),
             type,
             category: pSelect(p['カテゴリ']),
@@ -204,6 +211,9 @@ export function getCourses(): Promise<Course[]> {
             extra: pText(p['補足']),
             order: p['表示順']?.number ?? 0,
             curriculum,
+            payable: pCheckbox(p['決済対象']),
+            memberPrice: p['会員価格']?.number ?? 0,
+            nonMemberPrice: p['非会員価格']?.number ?? 0,
           } as Course;
         })
       );
