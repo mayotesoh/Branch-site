@@ -1,13 +1,13 @@
 // サイト全体で使う共通定数
 
 /**
- * 姉妹サイト（Fortune Lab）へのリンク
- * Branch は占い師向けの学び・育成コミュニティ。
- * Fortune Lab は Branch 出身の占い師が相談者を鑑定する鑑定サイト。
+ * 姉妹サイト（Lab online（仮））へのリンク
+ * Fortune Lab☆！ は占い師向けの学び・育成コミュニティ。
+ * Lab online（仮） は Fortune Lab☆！ 出身の占い師が相談者を鑑定する鑑定サイト。
  * ※ base が異なるため相手サイトへは絶対URLでリンクする。
  */
 export const SISTER_SITE_URL = 'https://mayotesoh.github.io/fortune-lab/';
-export const SISTER_SITE_NAME = 'Fortune Lab☆！';
+export const SISTER_SITE_NAME = 'Lab online（仮）';
 export const SISTER_SITE_DESC = '占い鑑定';
 
 /**

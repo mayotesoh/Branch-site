@@ -7,11 +7,12 @@ const base = import.meta.env.BASE_URL;
 <footer class="site-footer">
   <div class="container footer-inner">
     <div class="footer-brand">
-      <span class="brand-mark">✦</span> Branch
+      <span class="brand-mark">✦</span> Fortune Lab☆！
       <p class="footer-tagline">占い師のための学びと出会いのコミュニティ</p>
+      <p class="footer-founded">設立：2026年3月4日</p>
     </div>
     <nav class="footer-nav">
-      <a href={`${base.replace(/\/$/, '')}/#about`}>Branchとは</a>
+      <a href={`${base.replace(/\/$/, '')}/#about`}>Fortune Lab☆！とは</a>
       <a href={`${base.replace(/\/$/, '')}/#features`}>学べること</a>
       <a href={`${base.replace(/\/$/, '')}/join`}>参加する</a>
       <a href={LINE_URL} target="_blank" rel="noopener noreferrer">LINEで予約・相談</a>
@@ -24,7 +25,7 @@ const base = import.meta.env.BASE_URL;
     </nav>
   </div>
   <div class="container footer-bottom">
-    <small>&copy; {year} Branch. All rights reserved.</small>
+    <small>&copy; {year} Fortune Lab☆！. All rights reserved.</small>
   </div>
 </footer>
 
@@ -56,6 +57,13 @@ const base = import.meta.env.BASE_URL;
     font-weight: 400;
     color: var(--color-text-muted);
     margin-top: 0.4rem;
+  }
+  .footer-founded {
+    font-family: var(--font-sans);
+    font-size: 0.8rem;
+    font-weight: 400;
+    color: var(--color-text-muted);
+    margin-top: 0.3rem;
   }
   .footer-nav {
     display: flex;
