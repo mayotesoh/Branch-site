@@ -4,7 +4,7 @@ const base = import.meta.env.BASE_URL;
 const withBase = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
 
 const links = [
-  { href: withBase('/#about'), label: 'Fortune Lab☆！とは' },
+  { href: withBase('/#about'), label: 'ラボとは' },
   { href: withBase('/about'), label: 'コミュニティ紹介' },
   { href: withBase('/#features'), label: '学べること' },
   { href: withBase('/courses'), label: '講座紹介' },
@@ -74,6 +74,8 @@ const links = [
     font-weight: 700;
     color: var(--color-text);
     letter-spacing: 0.08em;
+    white-space: nowrap;
+    flex-shrink: 0;
   }
   .brand:hover {
     color: var(--color-text);
