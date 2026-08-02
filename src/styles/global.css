@@ -8,8 +8,8 @@
   --color-text-muted: #66785a;
   --color-accent: #c2a14a;
   --color-accent-soft: #a07f2e;
-  --color-primary: #6fa845;
-  --color-primary-soft: #5b9135;
+  --color-primary: #5f2fff;
+  --color-primary-soft: #4a1fd6;
 
   --font-sans: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
     "Meiryo", system-ui, sans-serif;
@@ -38,7 +38,7 @@ body {
   -webkit-font-smoothing: antialiased;
   background-image: radial-gradient(
       circle at 15% 10%,
-      rgba(111, 168, 69, 0.16),
+      rgba(95, 47, 255, 0.14),
       transparent 42%
     ),
     radial-gradient(circle at 85% 30%, rgba(194, 161, 74, 0.1), transparent 45%);
