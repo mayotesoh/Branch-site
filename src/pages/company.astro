@@ -1,0 +1,206 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { LINE_URL } from '../consts';
+
+const base = import.meta.env.BASE_URL;
+const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+
+// 運営インスタ
+const INSTAGRAM = 'https://www.instagram.com/branch_cafe/';
+
+// 特定商取引法に基づく表記（★＝要記入。運営情報が確定したら差し替え）
+const tokushoho: [string, string][] = [
+  ['販売事業者名', 'Branch（★正式名称・屋号をご記入ください）'],
+  ['運営統括責任者', '★代表者名をご記入ください'],
+  ['所在地', '★所在地をご記入ください（請求があれば遅滞なく開示）'],
+  ['連絡先', '★メールアドレス／電話番号をご記入ください'],
+  ['販売価格', '各講座・各鑑定のページに記載の金額（税込）'],
+  ['商品代金以外の必要料金', 'なし（オンライン提供のため送料等は発生しません）'],
+  ['お支払い方法', 'クレジットカード（Stripe決済）'],
+  ['お支払い時期', 'お申し込み・ご予約時に決済（前払い）'],
+  ['役務の提供時期', '講座：決済後にご案内する日程／鑑定：ご予約の日時'],
+  [
+    '返品・キャンセル',
+    'サービスの性質上、決済後のお客様都合による返金は原則お受けできません。日程変更は開催の●日前まで承ります。詳細は★キャンセルポリシーをご記入ください。',
+  ],
+];
+---
+
+<Layout
+  title="運営元情報｜Fortune Lab☆！"
+  description="Fortune Lab☆！ の運営元（Branch）情報および特定商取引法に基づく表記です。"
+>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="page-title">運営元情報</h1>
+
+      <!-- 運営元について -->
+      <div class="op-block">
+        <h2 class="op-h2">運営元について</h2>
+        <p class="op-lead">
+          占い師育成コミュニティ <strong>Fortune Lab☆！</strong> は、
+          <strong>Branch</strong> が運営しています。
+        </p>
+        <p class="op-body">
+          Branch は、占いを「仕事」にして稼げる占い師を育てる教育コミュニティ「Fortune Lab☆！」の
+          運営のほか、地域に根ざした活動を行っています。講座・セミナー・鑑定を通じて、
+          占い師の学びと活躍の場を提供しています。
+        </p>
+      </div>
+
+      <!-- インスタで活動紹介 -->
+      <div class="op-block">
+        <h2 class="op-h2">活動の様子（公式Instagram）</h2>
+        <p class="op-body">
+          日々の活動や講座・イベントの様子は、公式Instagramで発信しています。
+        </p>
+        <a class="insta-card" href={INSTAGRAM} target="_blank" rel="noopener noreferrer">
+          <span class="insta-ic">📸</span>
+          <span class="insta-txt">
+            <strong>@branch_cafe</strong>
+            <small>Instagramで活動を見る ↗</small>
+          </span>
+        </a>
+        <!-- 特定の投稿を埋め込みたい場合は、投稿URLを教えていただければ設置します -->
+      </div>
+
+      <!-- 特定商取引法に基づく表記 -->
+      <div class="op-block">
+        <h2 class="op-h2">特定商取引法に基づく表記</h2>
+        <table class="tokusho">
+          <tbody>
+            {tokushoho.map(([k, v]) => (
+              <tr>
+                <th>{k}</th>
+                <td>{v}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+        <p class="op-note">
+          ※「★」の項目は運営情報の確定後に差し替えます。ご確認・ご記入をお願いします。
+        </p>
+      </div>
+
+      <!-- 問い合わせ -->
+      <div class="op-block">
+        <h2 class="op-h2">お問い合わせ</h2>
+        <p class="op-body">ご不明点は公式LINEよりお気軽にご連絡ください。</p>
+        <div class="op-actions">
+          {LINE_URL && (
+            <a class="btn btn-primary" href={LINE_URL} target="_blank" rel="noopener noreferrer">
+              公式LINEで問い合わせる
+            </a>
+          )}
+          <a class="btn btn-ghost" href={link('/')}>トップへ戻る</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .narrow {
+    max-width: 720px;
+  }
+  .page-title {
+    font-size: clamp(1.8rem, 5vw, 2.4rem);
+    margin-bottom: 2rem;
+  }
+  .op-block {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 1.8rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow, 0 8px 30px rgba(0, 0, 0, 0.06));
+  }
+  .op-h2 {
+    font-size: 1.2rem;
+    margin-bottom: 1rem;
+    color: var(--color-primary-soft);
+  }
+  .op-lead {
+    font-size: 1.05rem;
+    margin-bottom: 0.8rem;
+  }
+  .op-body {
+    color: var(--color-text-muted);
+    font-size: 0.95rem;
+  }
+  .op-note {
+    color: var(--color-text-muted);
+    font-size: 0.82rem;
+    margin-top: 0.9rem;
+  }
+  .insta-card {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.9rem;
+    margin-top: 1rem;
+    padding: 0.9rem 1.3rem;
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    background: var(--color-bg-soft);
+    color: inherit;
+    transition: border-color 0.2s ease, transform 0.15s ease;
+  }
+  .insta-card:hover {
+    border-color: var(--color-primary);
+    transform: translateY(-2px);
+    color: inherit;
+  }
+  .insta-ic {
+    font-size: 1.6rem;
+  }
+  .insta-txt {
+    display: grid;
+  }
+  .insta-txt strong {
+    font-size: 1.05rem;
+  }
+  .insta-txt small {
+    color: var(--color-primary-soft);
+    font-size: 0.82rem;
+  }
+  .tokusho {
+    width: 100%;
+    border-collapse: collapse;
+    font-size: 0.92rem;
+  }
+  .tokusho th,
+  .tokusho td {
+    text-align: left;
+    vertical-align: top;
+    padding: 0.75rem 0.6rem;
+    border-bottom: 1px solid var(--color-border);
+  }
+  .tokusho th {
+    width: 34%;
+    color: var(--color-text);
+    font-weight: 700;
+    white-space: nowrap;
+  }
+  .tokusho td {
+    color: var(--color-text-muted);
+  }
+  @media (max-width: 520px) {
+    .tokusho th,
+    .tokusho td {
+      display: block;
+      width: 100%;
+      border-bottom: none;
+      padding: 0.3rem 0.6rem;
+    }
+    .tokusho td {
+      padding-bottom: 0.9rem;
+      border-bottom: 1px solid var(--color-border);
+    }
+  }
+  .op-actions {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+</style>
