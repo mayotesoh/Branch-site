@@ -1,17 +1,14 @@
 // @ts-check
 import { defineConfig } from 'astro/config';
 
-// GitHub Pages 用の設定
+// GitHub Pages ＋ 独自ドメイン（fortunelab-marchfourth.com）用の設定
 // ─────────────────────────────────────────────────────────
-// プロジェクトページ（https://<ユーザー名>.github.io/Branch-site/）に
-// デプロイする想定の初期値です。
-//
-//  - 独自ドメインや <ユーザー名>.github.io リポジトリを使う場合は
-//    `base` を '/' に変更し、`site` を実際のURLに書き換えてください。
-//  - リポジトリ名を変えた場合は `base` を合わせて変更してください。
+// 独自ドメインはルート直下で配信されるため base は '/'。
+// リポジトリ名は Branch-site のままだが、URLは独自ドメインに一本化。
+// 旧URL（mayotesoh.github.io/Branch-site/…）は GitHub が自動転送する。
 // ─────────────────────────────────────────────────────────
 export default defineConfig({
-  site: 'https://mayotesoh.github.io',
-  base: '/Branch-site',
+  site: 'https://fortunelab-marchfourth.com',
+  base: '/',
   output: 'static',
 });

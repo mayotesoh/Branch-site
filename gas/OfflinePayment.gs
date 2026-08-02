@@ -83,8 +83,8 @@ function handleOfflineCheckout(data) {
     'line_items[0][price_data][unit_amount]': String(amount),
     'line_items[0][quantity]': '1',
     // 対面なので戻り先は簡易（お客様のスマホに表示される）
-    success_url: 'https://mayotesoh.github.io/Branch-site/pay/thanks/',
-    cancel_url: 'https://mayotesoh.github.io/Branch-site/pay/',
+    success_url: 'https://fortunelab-marchfourth.com/pay/thanks/',
+    cancel_url: 'https://fortunelab-marchfourth.com/pay/',
     expires_at: String(Math.floor(Date.now() / 1000) + 30 * 60),
     'metadata[recordId]': rec.id,
     'metadata[kind]': 'offline',
