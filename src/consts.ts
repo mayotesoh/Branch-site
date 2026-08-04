@@ -17,6 +17,12 @@ export const SISTER_SITE_DESC = '占い鑑定';
  */
 export const INSTAGRAM_URL = '';
 
+/**
+ * PAY.JP 公開鍵（pk_test_… / pk_live_…）。公開鍵はクライアントに出しても安全。
+ * 秘密鍵はGASのスクリプトプロパティへ。空文字なら決済オフ（申込のみ受付）。
+ */
+export const PAYJP_PUBLIC_KEY = '';
+
 /** 公式LINE 友だち追加・予約・相談リンク */
 export const LINE_URL = 'https://lin.ee/SvCKDYoj';
 

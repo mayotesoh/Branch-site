@@ -1,5 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import PayjpCard from '../components/PayjpCard.astro';
 import { GAS_URL, LINE_URL } from '../consts';
 import { getCourses } from '../lib/notion';
 
@@ -93,6 +94,8 @@ const yen = (n: number) => '¥' + n.toLocaleString('ja-JP');
       }
     </div>
   </section>
+
+  <PayjpCard />
 </Layout>
 
 <script define:vars={{ GAS_URL, BASE: import.meta.env.BASE_URL }}>
@@ -129,7 +132,7 @@ const yen = (n: number) => '¥' + n.toLocaleString('ja-JP');
       resultEl.className = 'result ' + (type || '');
     }
 
-    form.addEventListener('submit', async (ev) => {
+    form.addEventListener('submit', (ev) => {
       ev.preventDefault();
       show('', '');
       const courseId = courseSel.value;
@@ -145,29 +148,34 @@ const yen = (n: number) => '¥' + n.toLocaleString('ja-JP');
         return;
       }
 
-      const basePath = (BASE || '/').replace(/\/$/, '');
-      const completeUrl = window.location.origin + basePath + '/apply/complete/';
-      const cancelUrl = window.location.origin + basePath + '/apply/';
+      const opt = courseSel.options[courseSel.selectedIndex];
+      const amount = Number(isMember() ? opt.dataset.member : opt.dataset.non) || 0;
+      const payload = { action: 'course_charge', courseId, name, email, memberNo: no };
 
+      // 決済有効ならカードモーダル → トークン → 課金。無効なら申込のみ。
+      if (window.PayjpCard && window.PayjpCard.enabled) {
+        window.PayjpCard.open({
+          amount, name, email,
+          onToken: (token) => sendApply({ ...payload, token }),
+        });
+      } else {
+        sendApply(payload);
+      }
+    });
+
+    async function sendApply(payload) {
       submitBtn.disabled = true;
       submitBtn.textContent = '送信中…';
       try {
         const res = await fetch(GAS_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'course_checkout',
-            courseId, name, email, memberNo: no,
-            completeUrl, cancelUrl,
-          }),
+          body: JSON.stringify(payload),
         });
         const data = await res.json();
-        if (data.status === 'checkout' && data.url) {
-          show('決済ページへ移動します…', '');
-          window.location.href = data.url;
-          return;
-        } else if (data.status === 'applied') {
-          show(`✓ ${data.message}（${data.course} / ${yen(data.amount)}）`, 'success');
+        if (data.status === 'success' || data.status === 'applied') {
+          const paid = data.paid ? '（お支払い完了）' : '';
+          show(`✓ お申し込みを受け付けました${paid}。（${data.course || ''}${data.amount ? ' / ' + yen(data.amount) : ''}）`, 'success');
           form.reset();
           updatePrice();
         } else {
@@ -180,11 +188,6 @@ const yen = (n: number) => '¥' + n.toLocaleString('ja-JP');
         submitBtn.disabled = false;
         submitBtn.textContent = 'この内容で申し込む';
       }
-    });
-
-    // 決済キャンセルで戻ってきた場合
-    if (new URLSearchParams(window.location.search).get('canceled')) {
-      show('お支払いがキャンセルされました。もう一度お手続きください。', 'error');
     }
   }
 </script>

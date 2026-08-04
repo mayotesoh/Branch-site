@@ -1,0 +1,173 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PayjpCard from '../../components/PayjpCard.astro';
+import { GAS_URL } from '../../consts';
+---
+
+<Layout title="お支払い｜Fortune Lab☆！" description="対面決済のお支払いページです。">
+  <section class="section">
+    <div class="container narrow" id="root" data-gas={GAS_URL}>
+      <div id="card" class="pay-card">
+        <div class="spinner" id="spinner" aria-hidden="true"></div>
+        <h1 id="c-title" class="c-title">お支払い内容を確認しています…</h1>
+        <p id="c-item" class="c-item"></p>
+        <p id="c-amount" class="c-amount"></p>
+        <button type="button" id="pay-btn" class="btn btn-primary pay-btn" hidden>カードで支払う</button>
+        <p id="c-msg" class="c-msg"></p>
+      </div>
+    </div>
+  </section>
+
+  <PayjpCard />
+</Layout>
+
+<script define:vars={{ GAS_URL }}>
+  const spinner = document.getElementById('spinner');
+  const titleEl = document.getElementById('c-title');
+  const itemEl = document.getElementById('c-item');
+  const amountEl = document.getElementById('c-amount');
+  const payBtn = document.getElementById('pay-btn');
+  const msgEl = document.getElementById('c-msg');
+  const rid = new URLSearchParams(window.location.search).get('rid');
+
+  const yen = (n) => '¥' + Number(n).toLocaleString('ja-JP');
+  let amount = 0;
+
+  function fail(msg) {
+    spinner.style.display = 'none';
+    titleEl.textContent = 'ページを開けませんでした';
+    msgEl.textContent = msg;
+    msgEl.className = 'c-msg error';
+  }
+
+  (async function init() {
+    if (!rid) return fail('お支払い情報が見つかりません。スタッフにお声がけください。');
+    if (!window.PayjpCard || !window.PayjpCard.enabled) {
+      return fail('決済が有効化されていません。');
+    }
+    try {
+      const res = await fetch(GAS_URL + '?action=offline_info&rid=' + encodeURIComponent(rid));
+      const data = await res.json();
+      if (data.status !== 'ok') return fail(data.message || '情報の取得に失敗しました。');
+
+      spinner.style.display = 'none';
+      itemEl.textContent = data.item || '';
+      amount = data.amount || 0;
+      amountEl.textContent = yen(amount);
+
+      if (data.paid) {
+        titleEl.textContent = 'お支払い済みです';
+        payBtn.hidden = true;
+        return;
+      }
+      titleEl.textContent = 'お支払い';
+      payBtn.hidden = false;
+    } catch (e) {
+      fail('通信エラーが発生しました。電波状況をご確認ください。');
+    }
+  })();
+
+  payBtn.addEventListener('click', () => {
+    msgEl.textContent = '';
+    window.PayjpCard.open({
+      amount,
+      onToken: async (token) => {
+        payBtn.disabled = true;
+        payBtn.textContent = '処理中…';
+        try {
+          const res = await fetch(GAS_URL, {
+            method: 'POST',
+            headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+            body: JSON.stringify({ action: 'offline_charge', rid, token }),
+          });
+          const data = await res.json();
+          if (data.status === 'paid') {
+            titleEl.textContent = 'お支払いありがとうございました';
+            itemEl.style.display = 'none';
+            amountEl.style.display = 'none';
+            payBtn.hidden = true;
+            msgEl.textContent = 'この画面をスタッフにお見せください。';
+            msgEl.className = 'c-msg ok';
+            document.getElementById('card').classList.add('done');
+          } else {
+            msgEl.textContent = data.message || 'お支払いに失敗しました。';
+            msgEl.className = 'c-msg error';
+          }
+        } catch (e) {
+          msgEl.textContent = '通信エラーが発生しました。';
+          msgEl.className = 'c-msg error';
+        } finally {
+          payBtn.disabled = false;
+          payBtn.textContent = 'カードで支払う';
+        }
+      },
+    });
+  });
+</script>
+
+<style>
+  .narrow {
+    max-width: 440px;
+  }
+  .pay-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 2.5rem 1.8rem;
+    text-align: center;
+    box-shadow: var(--shadow, 0 10px 30px rgba(0, 0, 0, 0.08));
+  }
+  .pay-card.done {
+    border-color: var(--color-primary);
+  }
+  .c-title {
+    font-size: clamp(1.3rem, 4vw, 1.7rem);
+    margin-bottom: 0.8rem;
+  }
+  .c-item {
+    color: var(--color-text-muted);
+    margin: 0 0 0.2rem;
+  }
+  .c-amount {
+    font-size: 2.2rem;
+    font-weight: 700;
+    color: var(--color-primary-soft);
+    margin: 0 0 1.5rem;
+  }
+  .pay-btn {
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    font-size: 1.05rem;
+    font-family: inherit;
+  }
+  .pay-btn:disabled {
+    opacity: 0.6;
+  }
+  .c-msg {
+    margin: 1rem 0 0;
+    font-size: 0.95rem;
+    min-height: 1.2em;
+  }
+  .c-msg.ok {
+    color: var(--color-primary-soft);
+    font-weight: 700;
+  }
+  .c-msg.error {
+    color: #d9534f;
+  }
+  .spinner {
+    width: 38px;
+    height: 38px;
+    margin: 0 auto 1.2rem;
+    border: 3px solid var(--color-border);
+    border-top-color: var(--color-primary);
+    border-radius: 50%;
+    animation: spin 0.8s linear infinite;
+  }
+  @keyframes spin {
+    to {
+      transform: rotate(360deg);
+    }
+  }
+</style>

@@ -2,7 +2,7 @@
  * Branch ─ 講座決済（会員 / 非会員で価格を出し分け）
  * ----------------------------------------------------------------------
  * 流れ:
- *   申込フォーム → 会員番号＋氏名で照合 → 価格を決定 → Stripe Checkout
+ *   申込フォーム → 会員番号＋氏名で照合 → 価格を決定 → PAY.JPで課金
  *   → 支払い完了 → 会員DBの「受講講座」に追加＋参加記録DBに1行
  *   → 既存の自動集計でスコア（スキルアップ講座受講数）に加点
  *
@@ -11,7 +11,7 @@
  *
  * 【セットアップ】スクリプトプロパティに登録:
  *   NOTION_TOKEN        … 既存
- *   STRIPE_SECRET_KEY   … 未設定なら「申込のみ受付（後日決済案内）」で動作
+ *   PAYJP_SECRET_KEY   … 未設定なら「申込のみ受付（後日決済案内）」で動作
  * ----------------------------------------------------------------------
  */
 
@@ -25,9 +25,6 @@ function cpToken_() {
   const t = PropertiesService.getScriptProperties().getProperty('NOTION_TOKEN');
   if (!t) throw new Error('NOTION_TOKEN が未設定です。');
   return t;
-}
-function cpStripeKey_() {
-  return PropertiesService.getScriptProperties().getProperty('STRIPE_SECRET_KEY');
 }
 
 function cpApi_(path, method, payload) {
@@ -96,15 +93,17 @@ function coursePrice_(coursePage, isMember) {
 }
 
 /**
- * 講座申込＋決済ページ作成
- * @param {{courseId:string, memberNo:string, name:string, email:string,
- *          completeUrl:string, cancelUrl:string}} data
+ * 講座申込＋決済（course_charge）
+ *   token あり かつ PAY.JP有効 → 課金 → 支払済みで申込＋受講履歴＋得点反映
+ *   それ以外 → 申込のみ受付（未決済。後日案内）
+ * @param {{courseId:string, memberNo:string, name:string, email:string, token:string}} data
  */
-function handleCourseCheckout(data) {
+function handleCourseCharge(data) {
   const courseId = String(data.courseId || '').trim();
   const name = String(data.name || '').trim();
   const email = String(data.email || '').trim();
   const memberNo = String(data.memberNo || '').trim();
+  const token = String(data.token || '').trim();
   if (!courseId || !name) throw new Error('講座とお名前は必須です。');
   if (email && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) throw new Error('メールアドレスの形式が正しくありません。');
 
@@ -125,137 +124,68 @@ function handleCourseCheckout(data) {
   const isMember = !!member;
   const amount = coursePrice_(course, isMember);
 
-  // 申込レコードを作成（未決済）
+  const paying = isPayjpEnabled_() && token;
+
+  // 課金（決済有効時のみ。失敗すれば例外→申込を作らない）
+  let chargeId = '';
+  if (paying) {
+    const charge = payjpCharge_(token, amount, courseName + '（' + (isMember ? '会員' : '一般') + '）', {
+      course: courseName, name: name,
+    });
+    chargeId = charge.id;
+  }
+
+  // 申込レコードを作成
   const applyProps = {
     '申込': { title: [{ text: { content: cpToday_() + ' ' + courseName + ' ' + name } }] },
     '講座': { relation: [{ id: courseId }] },
     '申込者名': { rich_text: [{ text: { content: name } }] },
     '区分': { select: { name: isMember ? '会員' : '非会員' } },
     '金額': { number: amount },
-    '決済状態': { select: { name: '未決済' } },
+    '決済状態': { select: { name: paying ? '支払済み' : '未決済' } },
     '申込日': { date: { start: cpToday_() } },
   };
   if (email) applyProps['メール'] = { email: email };
   if (member) applyProps['会員'] = { relation: [{ id: member.id }] };
-  const apply = cpApi_('pages', 'post', { parent: { database_id: CP_APPLY_DB }, properties: applyProps });
+  if (chargeId) applyProps['決済ID'] = { rich_text: [{ text: { content: chargeId } }] };
+  cpApi_('pages', 'post', { parent: { database_id: CP_APPLY_DB }, properties: applyProps });
 
-  // Stripe 未設定 → 申込のみ受付
-  if (!cpStripeKey_()) {
+  // 支払済み かつ 会員 → 受講履歴＋得点に反映
+  if (paying && member) {
+    reflectCoursePurchase_(member.id, courseId, courseName);
+  }
+
+  if (!paying) {
     return jsonOutput({
       status: 'applied',
       message: 'お申し込みを受け付けました。お支払い方法は担当より追ってご案内します。',
       course: courseName, amount: amount, isMember: isMember,
     });
   }
-
-  const completeUrl = String(data.completeUrl || '');
-  const cancelUrl = String(data.cancelUrl || '');
-  if (!/^https?:\/\//.test(completeUrl) || !/^https?:\/\//.test(cancelUrl)) {
-    throw new Error('戻り先URLが不正です。');
-  }
-
-  const payload = {
-    mode: 'payment',
-    'line_items[0][price_data][currency]': 'jpy',
-    'line_items[0][price_data][product_data][name]': courseName + '（' + (isMember ? '会員' : '一般') + '）',
-    'line_items[0][price_data][unit_amount]': String(amount),
-    'line_items[0][quantity]': '1',
-    success_url: completeUrl + (completeUrl.indexOf('?') === -1 ? '?' : '&') + 'session_id={CHECKOUT_SESSION_ID}',
-    cancel_url: cancelUrl + (cancelUrl.indexOf('?') === -1 ? '?' : '&') + 'canceled=1',
-    'metadata[applyId]': apply.id,
-  };
-  if (email) payload['customer_email'] = email;
-
-  const res = UrlFetchApp.fetch('https://api.stripe.com/v1/checkout/sessions', {
-    method: 'post',
-    headers: { Authorization: 'Bearer ' + cpStripeKey_() },
-    payload: payload,
-    muteHttpExceptions: true,
-  });
-  const body = JSON.parse(res.getContentText());
-  if (res.getResponseCode() < 200 || res.getResponseCode() >= 300) {
-    throw new Error('決済の開始に失敗しました: ' + (body.error && body.error.message ? body.error.message : ''));
-  }
-  return jsonOutput({ status: 'checkout', url: body.url });
+  return jsonOutput({ status: 'success', paid: true, course: courseName, amount: amount, isMember: isMember });
 }
 
-/**
- * 決済完了の確認 → 受講履歴と得点に反映（冪等）
- */
-function confirmCourseCheckout(sessionId) {
-  if (!sessionId) throw new Error('session_id がありません。');
-  if (!cpStripeKey_()) throw new Error('決済が有効化されていません。');
-
-  // 既に反映済みなら何もしない
-  const done = cpQuery_(CP_APPLY_DB, { property: '決済ID', rich_text: { equals: sessionId } });
-  if (done.length) {
-    const p = done[0].properties;
-    return jsonOutput({
-      status: 'confirmed', already: true,
-      summary: { course: cpText_(p['申込']), amount: p['金額'].number },
+/** 会員の受講履歴に講座を追加し、参加記録経由で得点を付与 */
+function reflectCoursePurchase_(memberId, courseId, courseName) {
+  const member = cpApi_('pages/' + memberId);
+  const cur = (member.properties['受講講座'].relation || []).map(function (r) { return { id: r.id }; });
+  if (!cur.some(function (r) { return r.id === courseId; })) {
+    cpApi_('pages/' + memberId, 'patch', {
+      properties: { '受講講座': { relation: cur.concat([{ id: courseId }]) } },
     });
   }
-
-  const res = UrlFetchApp.fetch(
-    'https://api.stripe.com/v1/checkout/sessions/' + encodeURIComponent(sessionId),
-    { method: 'get', headers: { Authorization: 'Bearer ' + cpStripeKey_() }, muteHttpExceptions: true }
-  );
-  const s = JSON.parse(res.getContentText());
-  if (res.getResponseCode() < 200 || res.getResponseCode() >= 300) throw new Error('決済情報の取得に失敗しました。');
-  if (s.payment_status !== 'paid') {
-    return jsonOutput({ status: 'pending', message: 'お支払いが確認できませんでした。' });
-  }
-
-  const applyId = (s.metadata || {}).applyId;
-  if (!applyId) throw new Error('申込情報が見つかりません。');
-  const apply = cpApi_('pages/' + applyId);
-  const ap = apply.properties;
-  const courseId = (ap['講座'].relation[0] || {}).id;
-  const memberId = (ap['会員'].relation[0] || {}).id;
-  const courseName = courseId ? cpText_(cpApi_('pages/' + courseId).properties['講座名']) : '';
-
-  // 申込を支払済みに
-  cpApi_('pages/' + applyId, 'patch', {
+  cpApi_('pages', 'post', {
+    parent: { database_id: CP_ATTEND_DB },
     properties: {
-      '決済状態': { select: { name: '支払済み' } },
-      '決済ID': { rich_text: [{ text: { content: sessionId } }] },
+      '記録': { title: [{ text: { content: cpToday_() + ' ' + courseName + '（受講）' } }] },
+      '会員': { relation: [{ id: memberId }] },
+      '状態': { select: { name: '出席' } },
+      '種別': { select: { name: 'スキルアップ講座' } },
+      '開催日': { date: { start: cpToday_() } },
+      '取込元': { select: { name: 'フォーム' } },
     },
   });
-
-  // 会員なら「受講講座」に追加し、参加記録から得点を付与
-  if (memberId && courseId) {
-    const member = cpApi_('pages/' + memberId);
-    const cur = (member.properties['受講講座'].relation || []).map(function (r) { return { id: r.id }; });
-    if (!cur.some(function (r) { return r.id === courseId; })) {
-      cpApi_('pages/' + memberId, 'patch', {
-        properties: { '受講講座': { relation: cur.concat([{ id: courseId }]) } },
-      });
-    }
-    // 参加記録（種別=スキルアップ講座）→ 既存の自動集計でスコアに反映
-    cpApi_('pages', 'post', {
-      parent: { database_id: CP_ATTEND_DB },
-      properties: {
-        '記録': { title: [{ text: { content: cpToday_() + ' ' + courseName + '（受講）' } }] },
-        '会員': { relation: [{ id: memberId }] },
-        '状態': { select: { name: '出席' } },
-        '種別': { select: { name: 'スキルアップ講座' } },
-        '開催日': { date: { start: cpToday_() } },
-        '取込元': { select: { name: 'フォーム' } },
-      },
-    });
-    // 当該四半期のスコアを再集計（Attendance.gs）
-    recomputeMemberScore_(memberId, atQuarterOf_(cpToday_()));
-  }
-
-  return jsonOutput({
-    status: 'confirmed',
-    summary: {
-      course: courseName,
-      amount: ap['金額'].number,
-      isMember: !!memberId,
-      name: cpText_(ap['申込者名']),
-    },
-  });
+  recomputeMemberScore_(memberId, atQuarterOf_(cpToday_())); // Attendance.gs
 }
 
 /** 【動作確認用】決済対象の講座と価格を一覧表示 */

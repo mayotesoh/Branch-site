@@ -47,13 +47,16 @@ function doPost(e) {
     }
 
     // (D) 講座の申込・決済 → 受講履歴＋得点に自動反映
-    if (data && data.action === 'course_checkout') {
-      return handleCourseCheckout(data); // CoursePayment.gs
+    if (data && data.action === 'course_charge') {
+      return handleCourseCharge(data); // CoursePayment.gs（PAY.JP課金 or 申込のみ）
     }
 
     // (E) 対面決済（現場QR）→ Checkout作成
-    if (data && data.action === 'offline_checkout') {
-      return handleOfflineCheckout(data); // OfflinePayment.gs
+    if (data && data.action === 'offline_create') {
+      return handleOfflineCreate(data); // OfflinePayment.gs（対面決済レコード作成）
+    }
+    if (data && data.action === 'offline_charge') {
+      return handleOfflineCharge(data); // OfflinePayment.gs（お客様がカードで支払い）
     }
 
     // (A) フォーム / LIFF からの予約
@@ -140,19 +143,20 @@ function resetHeaders() {
 
 /**
  * GET エントリーポイント
- *   ?action=course_confirm&session_id=... … 講座決済の入金確認（CoursePayment.gs）
+ *   ?action=offline_info&rid=…   … 対面決済レコードの金額等（お客様のカードページ用）
+ *   ?action=offline_status&rid=… … 対面決済の入金状況（スタッフ画面のポーリング用）
  *   （それ以外）… 動作確認メッセージ
  */
 function doGet(e) {
   try {
     const params = (e && e.parameter) || {};
-    if (params.action === 'course_confirm') {
-      return confirmCourseCheckout((params.session_id || '').toString());
+    if (params.action === 'offline_info') {
+      return getOfflineInfo((params.rid || '').toString()); // OfflinePayment.gs
     }
     if (params.action === 'offline_status') {
-      return checkOfflineStatus((params.session_id || '').toString()); // OfflinePayment.gs
+      return checkOfflineStatus((params.rid || '').toString()); // OfflinePayment.gs
     }
-    return jsonOutput({ status: 'ok', message: 'Branch 予約API は稼働中です。' });
+    return jsonOutput({ status: 'ok', message: 'Fortune Lab☆！ 予約API は稼働中です。' });
   } catch (err) {
     return jsonOutput({
       status: 'error',

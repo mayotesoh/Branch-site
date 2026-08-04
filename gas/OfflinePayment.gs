@@ -1,21 +1,18 @@
 /**
- * Branch ─ 対面決済（現場でQRを表示して決済）
+ * Fortune Lab☆！ ─ 対面決済（現場でQRを表示、お客様のスマホでカード決済）
  * ----------------------------------------------------------------------
- * 使い方（スタッフ）:
- *   サイトの /pay を開く → 品目と金額を入力 → QRが表示される
- *   → お客様がスマホで読み取って決済 → スタッフ画面に「支払い完了」が出る
- *
- * 仕組み:
- *   金額入力 → Stripe Checkout セッション作成 → そのURLをQR化
- *   → 数秒おきに入金確認をポーリング → 完了したら対面決済DBを支払済みに更新
+ * 流れ:
+ *   スタッフ /pay で品目・金額入力 → offline_create でレコード作成
+ *   → QRは /pay/card?rid=<レコードID> を指す
+ *   → お客様がスマホで開く → 金額確認 → カード入力（pay.js）→ offline_charge
+ *   → PAY.JPで課金 → レコードを支払済みに → スタッフ画面が offline_status で検知
  *
  * 【セットアップ】スクリプトプロパティ:
- *   NOTION_TOKEN / STRIPE_SECRET_KEY
- *   STRIPE_SECRET_KEY 未設定の場合はエラーメッセージを返します。
+ *   NOTION_TOKEN / PAYJP_SECRET_KEY（Payjp.gs 参照）
  * ----------------------------------------------------------------------
  */
 
-const OP_DB = '3a776a17-0aae-810a-842f-dbde06f5058c'; // Branch 対面決済DB
+const OP_DB = '3a776a17-0aae-810a-842f-dbde06f5058c'; // 対面決済DB
 const OP_VER = '2022-06-28';
 
 // 金額の安全範囲（誤入力による高額決済を防ぐ）
@@ -26,9 +23,6 @@ function opToken_() {
   const t = PropertiesService.getScriptProperties().getProperty('NOTION_TOKEN');
   if (!t) throw new Error('NOTION_TOKEN が未設定です。');
   return t;
-}
-function opStripeKey_() {
-  return PropertiesService.getScriptProperties().getProperty('STRIPE_SECRET_KEY');
 }
 function opApi_(path, method, payload) {
   const res = UrlFetchApp.fetch('https://api.notion.com/v1/' + path, {
@@ -44,12 +38,15 @@ function opApi_(path, method, payload) {
   }
   return body;
 }
+const opText_ = function (p) {
+  return (((p && (p.title || p.rich_text)) || [])).map(function (t) { return t.plain_text; }).join('');
+};
 
 /**
- * 対面決済を開始し、QRにするURLを返す
+ * 対面決済レコードを作成（未決済）。QRにするレコードIDを返す。
  * @param {{item:string, amount:number, staff:string, memo:string}} data
  */
-function handleOfflineCheckout(data) {
+function handleOfflineCreate(data) {
   const item = String(data.item || '').trim();
   const amount = Math.round(Number(data.amount));
   const staff = String(data.staff || '').trim();
@@ -60,12 +57,10 @@ function handleOfflineCheckout(data) {
   if (amount < OP_MIN_AMOUNT || amount > OP_MAX_AMOUNT) {
     throw new Error('金額は ' + OP_MIN_AMOUNT + '円〜' + OP_MAX_AMOUNT + '円の範囲で入力してください。');
   }
-  if (!opStripeKey_()) {
-    throw new Error('決済がまだ有効化されていません（STRIPE_SECRET_KEY 未設定）。');
+  if (!isPayjpEnabled_()) {
+    throw new Error('決済がまだ有効化されていません（PAYJP_SECRET_KEY 未設定）。');
   }
 
-  const now = Utilities.formatDate(new Date(), 'Asia/Tokyo', 'yyyy-MM-dd HH:mm');
-  // 記録を先に作成（未決済）
   const props = {
     '品目': { title: [{ text: { content: item } }] },
     '金額': { number: amount },
@@ -76,74 +71,56 @@ function handleOfflineCheckout(data) {
   if (memo) props['メモ'] = { rich_text: [{ text: { content: memo } }] };
   const rec = opApi_('pages', 'post', { parent: { database_id: OP_DB }, properties: props });
 
-  const payload = {
-    mode: 'payment',
-    'line_items[0][price_data][currency]': 'jpy',
-    'line_items[0][price_data][product_data][name]': item,
-    'line_items[0][price_data][unit_amount]': String(amount),
-    'line_items[0][quantity]': '1',
-    // 対面なので戻り先は簡易（お客様のスマホに表示される）
-    success_url: 'https://fortunelab-marchfourth.com/pay/thanks/',
-    cancel_url: 'https://fortunelab-marchfourth.com/pay/',
-    expires_at: String(Math.floor(Date.now() / 1000) + 30 * 60),
-    'metadata[recordId]': rec.id,
-    'metadata[kind]': 'offline',
-  };
+  return jsonOutput({ status: 'created', rid: rec.id, item: item, amount: amount });
+}
 
-  const res = UrlFetchApp.fetch('https://api.stripe.com/v1/checkout/sessions', {
-    method: 'post',
-    headers: { Authorization: 'Bearer ' + opStripeKey_() },
-    payload: payload,
-    muteHttpExceptions: true,
-  });
-  const body = JSON.parse(res.getContentText());
-  if (res.getResponseCode() < 200 || res.getResponseCode() >= 300) {
-    throw new Error('決済の開始に失敗しました: ' + (body.error && body.error.message ? body.error.message : ''));
-  }
-  // セッションIDを記録（照合用）
-  opApi_('pages/' + rec.id, 'patch', {
-    properties: { '決済ID': { rich_text: [{ text: { content: body.id } }] } },
-  });
-
+/** お客様のカードページ用：レコードの品目・金額・状態を返す */
+function getOfflineInfo(rid) {
+  if (!rid) throw new Error('rid がありません。');
+  const rec = opApi_('pages/' + rid);
+  const p = rec.properties;
   return jsonOutput({
-    status: 'created',
-    url: body.url,
-    sessionId: body.id,
-    item: item,
-    amount: amount,
-    at: now,
+    status: 'ok',
+    item: opText_(p['品目']),
+    amount: (p['金額'] && p['金額'].number) || 0,
+    paid: !!(p['決済状態'] && p['決済状態'].select && p['決済状態'].select.name === '支払済み'),
   });
 }
 
 /**
- * 入金状況の確認（スタッフ画面がポーリングする）
- * 支払い済みなら対面決済DBを「支払済み」に更新する。
+ * お客様のカード決済（offline_charge）
+ * @param {{rid:string, token:string}} data
  */
-function checkOfflineStatus(sessionId) {
-  if (!sessionId) throw new Error('session_id がありません。');
-  if (!opStripeKey_()) throw new Error('決済が有効化されていません。');
+function handleOfflineCharge(data) {
+  const rid = String(data.rid || '').trim();
+  const token = String(data.token || '').trim();
+  if (!rid) throw new Error('rid がありません。');
+  if (!token) throw new Error('カード情報が確認できませんでした。');
 
-  const res = UrlFetchApp.fetch(
-    'https://api.stripe.com/v1/checkout/sessions/' + encodeURIComponent(sessionId),
-    { method: 'get', headers: { Authorization: 'Bearer ' + opStripeKey_() }, muteHttpExceptions: true }
-  );
-  const s = JSON.parse(res.getContentText());
-  if (res.getResponseCode() < 200 || res.getResponseCode() >= 300) {
-    throw new Error('決済情報の取得に失敗しました。');
-  }
+  const rec = opApi_('pages/' + rid);
+  const p = rec.properties;
+  const cur = p['決済状態'] && p['決済状態'].select && p['決済状態'].select.name;
+  if (cur === '支払済み') return jsonOutput({ status: 'paid' }); // 冪等
 
-  if (s.payment_status === 'paid') {
-    const recordId = (s.metadata || {}).recordId;
-    if (recordId) {
-      const rec = opApi_('pages/' + recordId);
-      const cur = rec.properties['決済状態'] && rec.properties['決済状態'].select;
-      if (!cur || cur.name !== '支払済み') {
-        opApi_('pages/' + recordId, 'patch', {
-          properties: { '決済状態': { select: { name: '支払済み' } } },
-        });
-      }
-    }
-    return jsonOutput({ status: 'paid' });
-  }
-  return jsonOutput({ status: s.status === 'expired' ? 'expired' : 'pending' });
+  const item = opText_(p['品目']);
+  const amount = (p['金額'] && p['金額'].number) || 0;
+  if (!amount) throw new Error('金額が不正です。');
+
+  const charge = payjpCharge_(token, amount, item, { rid: rid, kind: 'offline' });
+
+  opApi_('pages/' + rid, 'patch', {
+    properties: {
+      '決済状態': { select: { name: '支払済み' } },
+      '決済ID': { rich_text: [{ text: { content: charge.id } }] },
+    },
+  });
+  return jsonOutput({ status: 'paid' });
+}
+
+/** スタッフ画面のポーリング用：入金状況 */
+function checkOfflineStatus(rid) {
+  if (!rid) throw new Error('rid がありません。');
+  const rec = opApi_('pages/' + rid);
+  const st = rec.properties['決済状態'] && rec.properties['決済状態'].select && rec.properties['決済状態'].select.name;
+  return jsonOutput({ status: st === '支払済み' ? 'paid' : 'pending' });
 }
