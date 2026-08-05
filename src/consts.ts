@@ -19,9 +19,10 @@ export const INSTAGRAM_URL = '';
 
 /**
  * PAY.JP 公開鍵（pk_test_… / pk_live_…）。公開鍵はクライアントに出しても安全。
- * 秘密鍵はGASのスクリプトプロパティへ。空文字なら決済オフ（申込のみ受付）。
+ * 秘密鍵はGASのスクリプトプロパティへ。フロントとGASは必ず同じモードに。
+ * 本番切替時は pk_live_13d6bd6a76607d4c6702a99b に差し替え＋GASを sk_live_ に。
  */
-export const PAYJP_PUBLIC_KEY = '';
+export const PAYJP_PUBLIC_KEY = 'pk_test_58c51cb25eec8a844a85bdf8';
 
 /** 公式LINE 友だち追加・予約・相談リンク */
 export const LINE_URL = 'https://lin.ee/SvCKDYoj';
