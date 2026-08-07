@@ -6,23 +6,6 @@ const asset = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}
 
 const instructors = [
   {
-    name: '春名 渼月',
-    kana: 'はるな みづき',
-    image: asset('sibusawa.webp'),
-    catch: '誰もが持つ天からの宿命！！',
-    role: '乗り越える術を伝達する占い師',
-    tag: '理論派占い師＆当たる占い師養成講師',
-    arts: [
-      '紫微斗数',
-      '西洋占星術',
-      'タロット',
-      'チャネリング',
-      '九星気学',
-      '手相',
-      'カラー占術',
-    ],
-  },
-  {
     name: '多喜 渼春',
     kana: 'たき みはる',
     image: asset('harutyan.webp'),
@@ -52,7 +35,7 @@ const instructors = [
   <section class="section">
     <div class="container">
       <h1 class="section-title">講師紹介</h1>
-      <p class="section-lead">あなたの学びを導く、2人の養成講師</p>
+      <p class="section-lead">あなたの学びを導く、養成講師</p>
 
       <div class="instructor-list">
         {
