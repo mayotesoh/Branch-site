@@ -155,6 +155,18 @@ function handleCourseCharge(data) {
     reflectCoursePurchase_(member.id, courseId, courseName);
   }
 
+  // 運営（公式LINE）へ通知（失敗しても申込・決済は成立させる）
+  notifyAdminLine_(
+    (paying ? '💳 決済完了（新規申込）' : '📝 新規申込（未決済）') + '\n' +
+    '━━━━━━━━━━\n' +
+    '講座：' + courseName + '\n' +
+    'お名前：' + name + '（' + (isMember ? '会員' : '一般') + '）\n' +
+    '金額：¥' + Number(amount).toLocaleString() + '\n' +
+    (email ? 'メール：' + email + '\n' : '') +
+    (chargeId ? '決済ID：' + chargeId + '\n' : '') +
+    '日時：' + cpToday_()
+  );
+
   if (!paying) {
     return jsonOutput({
       status: 'applied',

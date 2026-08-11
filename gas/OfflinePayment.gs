@@ -114,6 +114,13 @@ function handleOfflineCharge(data) {
       '決済ID': { rich_text: [{ text: { content: charge.id } }] },
     },
   });
+
+  // 運営（公式LINE）へ通知
+  notifyAdminLine_(
+    '💳 対面決済 完了\n━━━━━━━━━━\n品目：' + item + '\n金額：¥' + Number(amount).toLocaleString() +
+    '\n決済ID：' + charge.id
+  );
+
   return jsonOutput({ status: 'paid' });
 }
 

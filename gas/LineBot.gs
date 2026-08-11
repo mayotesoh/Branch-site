@@ -43,6 +43,23 @@ function handleLineWebhook(data) {
 }
 
 function handleLineEvent(ev) {
+  // 送信先ID確認コマンド（運営セットアップ用）: 「ID」と送るとこの会話のIDを返す。
+  // 1対1なら userId、グループなら groupId を通知先に設定できる。
+  if (ev.type === 'message' && ev.message && ev.message.type === 'text' && ev.replyToken) {
+    const t = ev.message.text.trim().toUpperCase();
+    if (t === 'ID' || t === 'ＩＤ' || t === '通知先') {
+      const src = ev.source || {};
+      const id = src.groupId || src.roomId || src.userId || '(取得不可)';
+      const kind = src.groupId ? 'groupId（グループ）' : src.roomId ? 'roomId（複数トーク）' : 'userId（1対1）';
+      replyText(
+        ev.replyToken,
+        '通知先ID（' + kind + '）:\n' + id +
+        '\n\nこの値を Apps Script のスクリプトプロパティ「LINE_ADMIN_TARGET」に設定すると、決済完了時にここへ通知が届きます。'
+      );
+      return;
+    }
+  }
+
   const userId = ev.source && ev.source.userId;
   if (!userId) return;
 
@@ -216,12 +233,59 @@ function replyMessage(replyToken, messages) {
 function getLineDisplayName(userId) {
   try {
     const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/profile/' + userId, {
-      headers: { Authorization: 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN },
+      headers: { Authorization: 'Bearer ' + lineToken_() },
       muteHttpExceptions: true,
     });
     const p = JSON.parse(res.getContentText());
     return p.displayName || '';
   } catch (e) {
     return '';
+  }
+}
+
+/* ---------------- 運営向けプッシュ通知 ---------------- */
+
+/**
+ * チャネルアクセストークン。スクリプトプロパティ優先、無ければ定数。
+ * （リポジトリの定数はプレースホルダのため、実運用はプロパティ推奨）
+ */
+function lineToken_() {
+  const p = PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN');
+  return p || LINE_CHANNEL_ACCESS_TOKEN;
+}
+
+/**
+ * 指定の宛先（userId または groupId）へテキストをプッシュ送信。
+ * @param {string} to 宛先ID
+ * @param {string} text 本文
+ */
+function pushLineText_(to, text) {
+  if (!to) return;
+  UrlFetchApp.fetch('https://api.line.me/v2/bot/message/push', {
+    method: 'post',
+    contentType: 'application/json',
+    headers: { Authorization: 'Bearer ' + lineToken_() },
+    payload: JSON.stringify({ to: to, messages: [{ type: 'text', text: String(text).slice(0, 4900) }] }),
+    muteHttpExceptions: true,
+  });
+}
+
+/**
+ * 運営（公式LINE）へ通知する。宛先はスクリプトプロパティ LINE_ADMIN_TARGET。
+ * 複数宛先はカンマ区切りで指定可。未設定・失敗しても本処理は止めない。
+ * @param {string} text 通知本文
+ */
+function notifyAdminLine_(text) {
+  try {
+    const raw = PropertiesService.getScriptProperties().getProperty('LINE_ADMIN_TARGET');
+    if (!raw) {
+      console.warn('LINE_ADMIN_TARGET 未設定のため運営通知をスキップ');
+      return;
+    }
+    raw.split(',').map(function (s) { return s.trim(); }).filter(String).forEach(function (to) {
+      pushLineText_(to, text);
+    });
+  } catch (e) {
+    console.error('運営LINE通知エラー: ' + e);
   }
 }
