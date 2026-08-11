@@ -1,0 +1,437 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import PayjpCard from '../../components/PayjpCard.astro';
+import { GAS_URL, LINE_URL } from '../../consts';
+import { getCourses } from '../../lib/notion';
+
+export async function getStaticPaths() {
+  const courses = await getCourses();
+  return courses.map((c) => ({
+    params: { id: c.pageId.replace(/-/g, '') },
+    props: { course: c },
+  }));
+}
+
+const { course } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+const yen = (n: number) => '¥' + n.toLocaleString('ja-JP');
+const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPrice > 0);
+---
+
+<Layout
+  title={`${course.name}｜講座｜Fortune Lab☆！`}
+  description={course.desc || `${course.name} の詳細ページです。`}
+>
+  <section class="section">
+    <div class="container narrow">
+      <a class="back" href={link('/courses')}>← 講座一覧へ</a>
+
+      <!-- 見出し -->
+      <div class="head">
+        <div class="tags">
+          {course.type && <span class="tag tag-type">{course.type}</span>}
+          {course.category && <span class="tag">{course.category}</span>}
+        </div>
+        <h1 class="c-title">{course.name}</h1>
+        {course.courseName && <p class="c-sub">{course.courseName}</p>}
+      </div>
+
+      <!-- 概要 -->
+      {course.desc && <p class="c-desc">{course.desc}</p>}
+
+      <!-- メタ情報 -->
+      <div class="c-meta">
+        {course.instructor && (
+          <div class="meta-row"><span>担当講師</span><strong>{course.instructor}</strong></div>
+        )}
+        {course.period && (
+          <div class="meta-row"><span>期間・時間</span><strong>{course.period}</strong></div>
+        )}
+        {course.method && (
+          <div class="meta-row"><span>提供方法</span><strong>{course.method}</strong></div>
+        )}
+        {course.afterCare && (
+          <div class="meta-row"><span>アフターフォロー</span><strong>2か月間 無料</strong></div>
+        )}
+      </div>
+
+      <!-- カリキュラム -->
+      {course.curriculum.length > 0 && (
+        <div class="c-block">
+          <h2 class="c-h2">カリキュラム</h2>
+          <ul class="curri">
+            {course.curriculum.map((item) => <li>{item}</li>)}
+          </ul>
+          {course.extra && <p class="c-extra">{course.extra}</p>}
+        </div>
+      )}
+
+      {course.note && <p class="c-note">※ {course.note}</p>}
+
+      <!-- 申込・決済 -->
+      {
+        payable ? (
+          <div class="c-block apply-block" id="apply-block" data-course={course.pageId}>
+            <h2 class="c-h2">お申し込み</h2>
+            <div class="price-preview">
+              {course.memberPrice > 0 && (
+                <span class="pp"><b>会員</b>{yen(course.memberPrice)}</span>
+              )}
+              {course.nonMemberPrice > 0 && (
+                <span class="pp"><b>一般</b>{yen(course.nonMemberPrice)}</span>
+              )}
+            </div>
+
+            <form id="apply-form" class="apply-form">
+              <div class="field">
+                <span class="label-like">ご区分<span class="req">必須</span></span>
+                <div class="radio-row">
+                  <label class="radio"><input type="radio" name="kind" value="member" checked /><span>会員</span></label>
+                  <label class="radio"><input type="radio" name="kind" value="guest" /><span>一般（非会員）</span></label>
+                </div>
+              </div>
+              <div class="field" id="member-field">
+                <label for="memberNo">会員番号<span class="req">必須</span></label>
+                <input type="text" id="memberNo" placeholder="例：BR-001" autocomplete="off" />
+                <small class="hint">会員証・ご案内に記載の番号です。お名前と合わせて確認します。</small>
+              </div>
+              <div class="field">
+                <label for="name">お名前<span class="req">必須</span></label>
+                <input type="text" id="name" placeholder="お名前" autocomplete="name" required />
+              </div>
+              <div class="field">
+                <label for="email">メールアドレス<span class="opt">任意</span></label>
+                <input type="email" id="email" placeholder="example@email.com" autocomplete="email" />
+              </div>
+              <div class="pay-box">
+                <span>お支払い金額</span>
+                <strong id="price">—</strong>
+              </div>
+              <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
+                この講座を申し込む
+              </button>
+              <p id="result" class="result" role="status" aria-live="polite"></p>
+            </form>
+          </div>
+        ) : (
+          <div class="c-block contact-block">
+            <h2 class="c-h2">お申し込み・ご相談</h2>
+            <p class="c-desc">この講座は公式LINEにて受付・ご相談を承っています。</p>
+            <div class="contact-actions">
+              {LINE_URL && (
+                <a class="btn btn-primary" href={LINE_URL} target="_blank" rel="noopener noreferrer">
+                  LINEで相談する
+                </a>
+              )}
+              <a class="btn btn-ghost" href={link('/courses')}>他の講座を見る</a>
+            </div>
+          </div>
+        )
+      }
+    </div>
+  </section>
+
+  <PayjpCard />
+</Layout>
+
+<script
+  define:vars={{
+    GAS_URL,
+    COURSE_ID: course.pageId,
+    MEMBER_PRICE: course.memberPrice,
+    NON_MEMBER_PRICE: course.nonMemberPrice,
+  }}
+>
+  const form = document.getElementById('apply-form');
+  if (form) {
+    const memberField = document.getElementById('member-field');
+    const memberNo = document.getElementById('memberNo');
+    const priceEl = document.getElementById('price');
+    const submitBtn = document.getElementById('submit-btn');
+    const resultEl = document.getElementById('result');
+    const yen = (n) => '¥' + Number(n).toLocaleString('ja-JP');
+    const isMember = () => form.querySelector('input[name="kind"]:checked').value === 'member';
+
+    function updatePrice() {
+      memberField.hidden = !isMember();
+      memberNo.required = isMember();
+      const v = isMember() ? MEMBER_PRICE : NON_MEMBER_PRICE;
+      priceEl.textContent = Number(v) > 0 ? yen(v) : '要お問い合わせ';
+    }
+    form.querySelectorAll('input[name="kind"]').forEach((r) => r.addEventListener('change', updatePrice));
+    updatePrice();
+
+    function show(msg, type) {
+      resultEl.textContent = msg;
+      resultEl.className = 'result ' + (type || '');
+    }
+
+    form.addEventListener('submit', (ev) => {
+      ev.preventDefault();
+      show('', '');
+      const name = document.getElementById('name').value.trim();
+      const email = document.getElementById('email').value.trim();
+      const no = isMember() ? memberNo.value.trim() : '';
+      if (!name) { show('お名前を入力してください。', 'error'); return; }
+      if (isMember() && !no) { show('会員番号を入力してください。', 'error'); return; }
+
+      const amount = Number(isMember() ? MEMBER_PRICE : NON_MEMBER_PRICE) || 0;
+      const payload = { action: 'course_charge', courseId: COURSE_ID, name, email, memberNo: no };
+
+      if (window.PayjpCard && window.PayjpCard.enabled) {
+        window.PayjpCard.open({ amount, name, email, onToken: (token) => sendApply({ ...payload, token }) });
+      } else {
+        sendApply(payload);
+      }
+    });
+
+    async function sendApply(payload) {
+      submitBtn.disabled = true;
+      submitBtn.textContent = '送信中…';
+      try {
+        const res = await fetch(GAS_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify(payload),
+        });
+        const data = await res.json();
+        if (data.status === 'success' || data.status === 'applied') {
+          const paid = data.paid ? '（お支払い完了）' : '';
+          show(`✓ お申し込みを受け付けました${paid}。${data.amount ? '（' + yen(data.amount) + '）' : ''}`, 'success');
+          form.reset();
+          updatePrice();
+        } else {
+          show(data.message || 'お申し込みできませんでした。', 'error');
+        }
+      } catch (e) {
+        console.error(e);
+        show('送信に失敗しました。通信環境をご確認ください。', 'error');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = 'この講座を申し込む';
+      }
+    }
+  }
+</script>
+
+<style>
+  .narrow {
+    max-width: 720px;
+  }
+  .back {
+    display: inline-block;
+    margin-bottom: 1.2rem;
+    font-size: 0.9rem;
+    color: var(--color-text-muted);
+  }
+  .tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+  }
+  .tag {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.76rem;
+    color: var(--color-text-muted);
+  }
+  .tag-type {
+    border-color: var(--color-accent);
+    color: var(--color-accent-soft);
+  }
+  .c-title {
+    font-size: clamp(1.6rem, 4.5vw, 2.2rem);
+    margin-bottom: 0.3rem;
+  }
+  .c-sub {
+    color: var(--color-primary-soft);
+    font-size: 0.95rem;
+    margin-bottom: 1.2rem;
+  }
+  .c-desc {
+    color: var(--color-text);
+    line-height: 1.9;
+    margin-bottom: 1.5rem;
+  }
+  .c-meta {
+    display: grid;
+    gap: 0.5rem;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1.1rem 1.3rem;
+    margin-bottom: 1.8rem;
+  }
+  .meta-row {
+    display: flex;
+    justify-content: space-between;
+    gap: 1rem;
+    font-size: 0.92rem;
+  }
+  .meta-row span {
+    color: var(--color-text-muted);
+  }
+  .c-block {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius, 14px);
+    padding: 1.6rem;
+    margin-bottom: 1.5rem;
+    box-shadow: var(--shadow, 0 8px 30px rgba(0, 0, 0, 0.06));
+  }
+  .c-h2 {
+    font-size: 1.15rem;
+    margin-bottom: 1rem;
+    color: var(--color-primary-soft);
+  }
+  .curri {
+    margin: 0;
+    padding-left: 1.2rem;
+    display: grid;
+    gap: 0.4rem;
+    color: var(--color-text-muted);
+    font-size: 0.93rem;
+  }
+  .c-extra {
+    margin-top: 0.9rem;
+    color: var(--color-accent-soft);
+    font-size: 0.86rem;
+  }
+  .c-note {
+    color: var(--color-accent-soft);
+    font-size: 0.85rem;
+    margin-bottom: 1.5rem;
+  }
+
+  /* 申込ブロック */
+  .price-preview {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-bottom: 1.2rem;
+  }
+  .pp {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 0.5rem 0.9rem;
+    font-size: 1.05rem;
+    font-weight: 700;
+  }
+  .pp b {
+    font-size: 0.72rem;
+    color: var(--color-text-muted);
+    margin-right: 0.5rem;
+    font-weight: 700;
+  }
+  .apply-form {
+    display: grid;
+    gap: 1.2rem;
+  }
+  .field {
+    display: grid;
+    gap: 0.4rem;
+  }
+  .field label,
+  .label-like {
+    font-weight: 600;
+    font-size: 0.9rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+  }
+  .req,
+  .opt {
+    font-size: 0.68rem;
+    font-weight: 700;
+    border-radius: 4px;
+    padding: 0.05rem 0.4rem;
+  }
+  .req {
+    color: #fff;
+    background: var(--color-primary);
+  }
+  .opt {
+    color: var(--color-text-muted);
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+  }
+  .field input {
+    width: 100%;
+    padding: 0.8rem 0.9rem;
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    background: var(--color-bg);
+    color: var(--color-text);
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .field input:focus {
+    outline: none;
+    border-color: var(--color-primary);
+    box-shadow: 0 0 0 3px rgba(95, 47, 255, 0.22);
+  }
+  .hint {
+    color: var(--color-text-muted);
+    font-size: 0.8rem;
+  }
+  .radio-row {
+    display: flex;
+    gap: 1.5rem;
+  }
+  .radio {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    font-weight: 400;
+    cursor: pointer;
+  }
+  .radio input {
+    width: auto;
+    accent-color: var(--color-primary);
+  }
+  .pay-box {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 10px;
+    padding: 0.8rem 1.1rem;
+    font-size: 0.95rem;
+  }
+  .pay-box strong {
+    font-size: 1.35rem;
+    color: var(--color-primary-soft);
+  }
+  .submit-btn {
+    width: 100%;
+    border: none;
+    cursor: pointer;
+    font-size: 1rem;
+    font-family: inherit;
+  }
+  .result {
+    margin: 0;
+    text-align: center;
+    font-size: 0.93rem;
+    min-height: 1.2em;
+  }
+  .result.success {
+    color: var(--color-primary-soft);
+    font-weight: 700;
+  }
+  .result.error {
+    color: #d9534f;
+  }
+  .contact-actions {
+    display: flex;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    margin-top: 1rem;
+  }
+</style>
