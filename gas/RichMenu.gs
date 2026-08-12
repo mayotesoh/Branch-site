@@ -36,7 +36,7 @@ function createReserveRichMenu() {
   const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu', {
     method: 'post',
     contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN },
+    headers: { Authorization: 'Bearer ' + lineToken_() },
     payload: JSON.stringify(richMenu),
     muteHttpExceptions: true,
   });
@@ -56,7 +56,7 @@ function uploadRichMenuImage(richMenuId, imageFileId) {
     {
       method: 'post',
       contentType: blob.getContentType(), // image/png or image/jpeg
-      headers: { Authorization: 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN },
+      headers: { Authorization: 'Bearer ' + lineToken_() },
       payload: blob.getBytes(),
       muteHttpExceptions: true,
     }
@@ -72,7 +72,7 @@ function setDefaultRichMenu(richMenuId) {
     'https://api.line.me/v2/bot/user/all/richmenu/' + richMenuId,
     {
       method: 'post',
-      headers: { Authorization: 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN },
+      headers: { Authorization: 'Bearer ' + lineToken_() },
       muteHttpExceptions: true,
     }
   );
@@ -82,7 +82,7 @@ function setDefaultRichMenu(richMenuId) {
 /** 既存リッチメニュー一覧（確認用） */
 function listRichMenus() {
   const res = UrlFetchApp.fetch('https://api.line.me/v2/bot/richmenu/list', {
-    headers: { Authorization: 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN },
+    headers: { Authorization: 'Bearer ' + lineToken_() },
     muteHttpExceptions: true,
   });
   Logger.log(res.getContentText());

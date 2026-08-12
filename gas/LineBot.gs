@@ -224,7 +224,7 @@ function replyMessage(replyToken, messages) {
   UrlFetchApp.fetch('https://api.line.me/v2/bot/message/reply', {
     method: 'post',
     contentType: 'application/json',
-    headers: { Authorization: 'Bearer ' + LINE_CHANNEL_ACCESS_TOKEN },
+    headers: { Authorization: 'Bearer ' + lineToken_() },
     payload: JSON.stringify({ replyToken: replyToken, messages: messages }),
     muteHttpExceptions: true,
   });
