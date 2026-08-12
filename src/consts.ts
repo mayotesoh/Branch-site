@@ -2,8 +2,8 @@
 
 /**
  * 姉妹サイト（Lab online（仮））へのリンク
- * Fortune Lab☆！ は占い師向けの学び・育成コミュニティ。
- * Lab online（仮） は Fortune Lab☆！ 出身の占い師が相談者を鑑定する鑑定サイト。
+ * Fortune Labo は占い師向けの学び・育成コミュニティ。
+ * Lab online（仮） は Fortune Labo 出身の占い師が相談者を鑑定する鑑定サイト。
  * ※ base が異なるため相手サイトへは絶対URLでリンクする。
  */
 export const SISTER_SITE_URL = 'https://mayotesoh.github.io/fortune-lab/';
@@ -25,7 +25,7 @@ export const INSTAGRAM_URL = '';
 export const PAYJP_PUBLIC_KEY = 'pk_test_58c51cb25eec8a844a85bdf8';
 
 /** 公式LINE 友だち追加・予約・相談リンク */
-export const LINE_URL = 'https://lin.ee/SvCKDYoj';
+export const LINE_URL = 'https://lin.ee/SZZ4UJj';
 
 /** LINEボタンの既定ラベル */
 export const LINE_LABEL = 'LINEで予約・相談';
