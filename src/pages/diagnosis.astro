@@ -1,0 +1,341 @@
+---
+import Layout from '../layouts/Layout.astro';
+import LineButton from '../components/LineButton.astro';
+
+const base = import.meta.env.BASE_URL;
+const coursesUrl = `${base.replace(/\/$/, '')}/courses`;
+
+// ───────── 判定するフィールド（結果タイプ） ─────────
+const FIELDS = [
+  {
+    key: 'A', icon: '🚀', name: '個人集客・フリーランス型',
+    catch: '自分の看板で、直接お客様とつながる',
+    body: 'あなたは「自分のブランドで勝負したい」タイプ。SNSや自分のページで集客し、単価も働き方も自分で決めていくスタイルが合っています。自由度と収入の上限が高い一方、集客と仕組みづくりが鍵になります。',
+    courses: ['SNS講座', 'フリーランスの在り方講座', '予約システム（導線設計）', '適正診断とやり方アドバイス'],
+  },
+  {
+    key: 'B', icon: '🔮', name: '占いの館・対面型',
+    catch: '対面の場で、その場の鑑定力を発揮する',
+    body: 'あなたは目の前のお客様とじっくり向き合う対面が得意なタイプ。占いの館や対面サロンで、来てくれた人に深く応えるスタイルが合っています。まずは実占の場数と読みの精度を磨くのが近道です。',
+    courses: ['マイリーディング講座', '手相学習得プログラム', 'カードと仲良くなる会（リーディング会）', '適正診断とやり方アドバイス'],
+  },
+  {
+    key: 'C', icon: '📞', name: '電話・チャット所属型',
+    catch: '占いサービスに所属して、安定して数をこなす',
+    body: 'あなたは「集客は任せて鑑定に集中したい」タイプ。電話・チャット占いのサービスに所属し、供給される相談に安定的に応えていくスタイルが合っています。数をこなす対応力と、文字・声での的確な伝え方が武器になります。',
+    courses: ['適正診断とやり方アドバイス', '占い師キャリアの未来図を描くプランニングセッション'],
+  },
+  {
+    key: 'D', icon: '🎪', name: 'イベント・マルシェ型',
+    catch: '対面イベントで、短時間・回転で喜ばせる',
+    body: 'あなたは瞬発力とその場の掴みが得意なタイプ。イベントやマルシェに出店し、短時間の鑑定で多くの人を楽しませるスタイルが合っています。回転率を保ちながら満足度を出す「型」と、掴みの技術が効いてきます。',
+    courses: ['イベント・マルシェデビュー実力判定テスト', 'イベント主催'],
+  },
+  {
+    key: 'E', icon: '📱', name: 'SNS・コンテンツ発信型',
+    catch: '発信とコンテンツで、影響力を作って収益化する',
+    body: 'あなたは多くの人へ届ける発信が得意なタイプ。SNSや動画・コンテンツでファンを作り、そこから鑑定や講座へつなげるスタイルが合っています。発信を続ける仕組みと、専門性を落とさず短く伝える構成力が鍵です。',
+    courses: ['SNS講座', 'SNS上級講座（投稿内容半自動化）', 'AI活用セミナー'],
+  },
+];
+
+// ───────── 質問（各選択肢が各フィールドに加点） ─────────
+const QUESTIONS = [
+  {
+    q: '鑑定はどの形がいちばん好きですか？',
+    a: [
+      { t: '対面でじっくり向き合いたい', s: { B: 2, D: 1 } },
+      { t: '電話・チャットなど非対面が気楽', s: { C: 2, A: 1 } },
+      { t: '文章や動画で多くの人に届けたい', s: { E: 2, A: 1 } },
+      { t: 'その場の短い鑑定でパッと喜ばせたい', s: { D: 2, B: 1 } },
+    ],
+  },
+  {
+    q: '収入は「安定」と「自由」どちらを取りたい？',
+    a: [
+      { t: '毎月安定した依頼がほしい（所属でOK）', s: { C: 2, B: 1 } },
+      { t: '自由に働いて上限なく伸ばしたい', s: { A: 2, E: 1 } },
+      { t: 'イベントごとにまとめて稼ぎたい', s: { D: 2 } },
+      { t: 'コツコツ発信を資産にしたい', s: { E: 2, A: 1 } },
+    ],
+  },
+  {
+    q: '集客はどうしたいですか？',
+    a: [
+      { t: '自分のSNS・ページで集めたい', s: { A: 2, E: 1 } },
+      { t: 'サービスや館が用意した集客に乗りたい', s: { C: 2, B: 1 } },
+      { t: 'イベント出店でその場の人に', s: { D: 2 } },
+      { t: '発信でファンを作って集めたい', s: { E: 2, A: 1 } },
+    ],
+  },
+  {
+    q: '得意なコミュニケーションは？',
+    a: [
+      { t: '1対1でじっくり深く', s: { B: 2, C: 1 } },
+      { t: '短時間で相手の心を掴む', s: { D: 2 } },
+      { t: '大勢に向けて発信する', s: { E: 2 } },
+      { t: '文字ベースで丁寧に伝える', s: { C: 2, A: 1 } },
+    ],
+  },
+  {
+    q: '働く場所の理想は？',
+    a: [
+      { t: '自宅・オンライン中心', s: { A: 2, C: 1, E: 1 } },
+      { t: '店舗・サロンなど対面の場', s: { B: 2 } },
+      { t: '各地のイベント・マルシェ', s: { D: 2 } },
+      { t: 'どこでも（発信は場所を選ばない）', s: { E: 2 } },
+    ],
+  },
+  {
+    q: '1日にこなしたい鑑定数は？',
+    a: [
+      { t: '少数を丁寧に（1〜3件）', s: { A: 1, B: 2 } },
+      { t: '多め・回転重視でたくさん', s: { C: 2, D: 1 } },
+      { t: 'イベント日にまとめて', s: { D: 2 } },
+      { t: '鑑定より発信・制作に時間を使いたい', s: { E: 2 } },
+    ],
+  },
+  {
+    q: '収入の作り方の理想は？',
+    a: [
+      { t: '単価を上げて少数で', s: { A: 2, B: 1 } },
+      { t: '数で積み上げる（所属の歩合）', s: { C: 2 } },
+      { t: 'イベント売上＋その場の物販', s: { D: 2 } },
+      { t: '発信→商品・講座で仕組み化', s: { E: 2, A: 1 } },
+    ],
+  },
+  {
+    q: '自己PRや目立つことは？',
+    a: [
+      { t: '得意・好き（前に出たい）', s: { E: 2, D: 1 } },
+      { t: '1対1なら得意', s: { B: 2, C: 1 } },
+      { t: '苦手（用意された場がいい）', s: { C: 2 } },
+      { t: '自分のペースの発信なら', s: { A: 1, E: 1 } },
+    ],
+  },
+  {
+    q: 'いま一番ほしいものは？',
+    a: [
+      { t: '自分の看板と集客の仕組み', s: { A: 2, E: 1 } },
+      { t: '対面で場数を踏む機会', s: { B: 2, D: 1 } },
+      { t: '安定した仕事の供給', s: { C: 2 } },
+      { t: '発信のネタと続け方', s: { E: 2 } },
+    ],
+  },
+  {
+    q: 'デビューで重視するのは？',
+    a: [
+      { t: 'すぐ現場に立って稼ぐ', s: { C: 2, D: 1 } },
+      { t: '実力を磨いて指名される人に', s: { B: 2, A: 1 } },
+      { t: '自分のブランドを育てる', s: { A: 2, E: 1 } },
+      { t: '影響力で広く届ける', s: { E: 2 } },
+    ],
+  },
+];
+---
+
+<Layout
+  title="占い師フィールド適性診断｜Fortune Lab☆！"
+  description="あなたが占い師として最も力を発揮できる活動フィールド（個人集客・占いの館・電話/チャット所属・イベント・SNS発信）を10の質問で診断します。"
+>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section-title">占い師フィールド適性診断</h1>
+      <p class="section-lead">
+        占い師として活動する“フィールド”は人それぞれ。<br />
+        10の質問で、あなたが最も力を発揮できる活動スタイルを診断します。
+      </p>
+
+      <!-- イントロ -->
+      <div id="intro" class="panel">
+        <p class="intro-text">
+          個人集客／占いの館／電話・チャット所属／イベント・マルシェ／SNS発信──<br />
+          あなたに合うのはどれ？ 直感でどんどん選んでください（約1〜2分）。
+        </p>
+        <button id="start" class="btn btn-primary btn-lg">診断をはじめる</button>
+      </div>
+
+      <!-- 質問 -->
+      <div id="quiz" hidden>
+        <div class="progress"><div id="bar" class="progress-bar"></div></div>
+        <p id="q-count" class="q-count"></p>
+        <h2 id="q-text" class="q-text"></h2>
+        <div id="q-options" class="q-options"></div>
+        <button id="back" class="link-back" hidden>← 前の質問へ</button>
+      </div>
+
+      <!-- 結果 -->
+      <div id="result" hidden></div>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ QUESTIONS, FIELDS, coursesUrl }} is:inline>
+  const intro = document.getElementById('intro');
+  const quiz = document.getElementById('quiz');
+  const result = document.getElementById('result');
+  const bar = document.getElementById('bar');
+  const qCount = document.getElementById('q-count');
+  const qText = document.getElementById('q-text');
+  const qOptions = document.getElementById('q-options');
+  const backBtn = document.getElementById('back');
+
+  let idx = 0;
+  const answers = new Array(QUESTIONS.length).fill(null);
+
+  function render() {
+    const q = QUESTIONS[idx];
+    bar.style.width = `${(idx / QUESTIONS.length) * 100}%`;
+    qCount.textContent = `Q${idx + 1} / ${QUESTIONS.length}`;
+    qText.textContent = q.q;
+    qOptions.innerHTML = '';
+    q.a.forEach((opt, i) => {
+      const b = document.createElement('button');
+      b.className = 'opt' + (answers[idx] === i ? ' selected' : '');
+      b.textContent = opt.t;
+      b.addEventListener('click', () => {
+        answers[idx] = i;
+        if (idx < QUESTIONS.length - 1) { idx++; render(); }
+        else finish();
+      });
+      qOptions.appendChild(b);
+    });
+    backBtn.hidden = idx === 0;
+  }
+
+  function finish() {
+    const score = { A: 0, B: 0, C: 0, D: 0, E: 0 };
+    answers.forEach((ai, qi) => {
+      if (ai == null) return;
+      const s = QUESTIONS[qi].a[ai].s;
+      Object.keys(s).forEach((k) => (score[k] += s[k]));
+    });
+    const ranked = Object.keys(score).sort((a, b) => score[b] - score[a]);
+    const top = FIELDS.find((f) => f.key === ranked[0]);
+    const second = FIELDS.find((f) => f.key === ranked[1]);
+
+    bar.style.width = '100%';
+    quiz.hidden = true;
+    result.hidden = false;
+
+    const courseTags = top.courses
+      .map((c) => `<span class="course-tag">${c}</span>`)
+      .join('');
+    const secondLine =
+      score[ranked[1]] > 0
+        ? `<p class="sub-type">次に近いのは <strong>${second.icon} ${second.name}</strong>。組み合わせるとあなたらしさが際立ちます。</p>`
+        : '';
+
+    result.innerHTML = `
+      <div class="result-card">
+        <p class="result-eyebrow">あなたに合う活動フィールドは</p>
+        <div class="result-icon">${top.icon}</div>
+        <h2 class="result-name">${top.name}</h2>
+        <p class="result-catch">${top.catch}</p>
+        <p class="result-body">${top.body}</p>
+        ${secondLine}
+        <div class="result-courses">
+          <p class="rc-label">おすすめの次の一歩</p>
+          <div class="course-tags">${courseTags}</div>
+        </div>
+        <div class="result-actions">
+          <a class="btn btn-primary" href="${coursesUrl}">おすすめ講座を見る</a>
+          <button id="retry" class="btn btn-ghost">もう一度診断する</button>
+        </div>
+        <p class="result-note">
+          もっと詳しく知りたい方は、無料の<strong>「占い師キャリアの未来図を描くプランニングセッション」</strong>で、この結果をもとに具体的な進み方を一緒に整理できます。
+        </p>
+      </div>
+    `;
+    document.getElementById('retry').addEventListener('click', () => {
+      idx = 0;
+      answers.fill(null);
+      result.hidden = true;
+      quiz.hidden = false;
+      render();
+    });
+    result.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  document.getElementById('start').addEventListener('click', () => {
+    intro.hidden = true;
+    quiz.hidden = false;
+    render();
+  });
+  backBtn.addEventListener('click', () => {
+    if (idx > 0) { idx--; render(); }
+  });
+</script>
+
+<style>
+  .narrow { max-width: 720px; }
+  .panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem;
+    text-align: center;
+  }
+  .intro-text { color: var(--color-text-muted); line-height: 1.9; margin-bottom: 1.5rem; }
+  .btn-lg { font-size: 1.05rem; padding: 0.9rem 2.2rem; }
+
+  .progress {
+    height: 8px; background: var(--color-bg-soft);
+    border-radius: 999px; overflow: hidden; margin-bottom: 1rem;
+  }
+  .progress-bar {
+    height: 100%; width: 0;
+    background: var(--color-primary);
+    transition: width 0.3s ease;
+  }
+  .q-count { color: var(--color-primary-soft); font-weight: 700; font-size: 0.9rem; }
+  .q-text { font-size: 1.3rem; margin: 0.4rem 0 1.3rem; line-height: 1.6; }
+  .q-options { display: grid; gap: 0.7rem; }
+  .opt {
+    text-align: left; width: 100%;
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    font-size: 1rem; color: var(--color-text);
+    cursor: pointer; line-height: 1.5;
+    transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease;
+  }
+  .opt:hover { border-color: var(--color-primary); transform: translateY(-2px); }
+  .opt.selected { border-color: var(--color-primary); background: var(--color-bg-soft); }
+  .link-back {
+    margin-top: 1.2rem; background: none; border: none;
+    color: var(--color-text-muted); cursor: pointer; font-size: 0.9rem;
+  }
+  .link-back:hover { color: var(--color-primary); }
+
+  .result-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-top: 5px solid var(--color-primary);
+    border-radius: var(--radius);
+    padding: 2.2rem 1.6rem; text-align: center;
+  }
+  .result-eyebrow { color: var(--color-text-muted); font-size: 0.9rem; }
+  .result-icon { font-size: 3.4rem; line-height: 1; margin: 0.5rem 0; }
+  .result-name { font-size: 1.6rem; color: var(--color-primary-soft); }
+  .result-catch { font-weight: 700; margin: 0.5rem 0 1rem; }
+  .result-body { color: var(--color-text-muted); line-height: 1.9; text-align: left; }
+  .sub-type { margin-top: 1rem; color: var(--color-text-muted); font-size: 0.92rem; }
+  .result-courses { margin: 1.6rem 0; }
+  .rc-label { font-weight: 700; margin-bottom: 0.6rem; }
+  .course-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+  .course-tag {
+    background: var(--color-bg-soft); border: 1px solid var(--color-border);
+    border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.85rem;
+    color: var(--color-primary-soft);
+  }
+  .result-actions {
+    display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap; margin-top: 0.5rem;
+  }
+  .result-note {
+    margin-top: 1.6rem; padding-top: 1.2rem;
+    border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.8; text-align: left;
+  }
+</style>
