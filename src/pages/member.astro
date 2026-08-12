@@ -1,0 +1,217 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { GAS_URL } from '../consts';
+---
+
+<Layout
+  title="会員ページ｜Fortune Labo"
+  description="Fortune Labo 会員専用ページ。会員番号と暗証番号でログインし、あなたのスコア・評定・受講状況を確認できます。"
+>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section-title">会員ページ</h1>
+
+      <!-- ログイン -->
+      <div id="login" class="panel">
+        <p class="login-lead">
+          会員番号と暗証番号（4桁）でログインしてください。<br />
+          暗証番号は運営からご案内した番号です。
+        </p>
+        <form id="login-form" class="login-form" novalidate>
+          <label class="field">
+            <span class="field-label">会員番号</span>
+            <input id="memberNo" type="text" inputmode="text" autocomplete="off"
+              placeholder="例：BR-001" required />
+          </label>
+          <label class="field">
+            <span class="field-label">暗証番号（4桁）</span>
+            <input id="pin" type="password" inputmode="numeric" autocomplete="off"
+              maxlength="4" pattern="[0-9]*" placeholder="••••" required />
+          </label>
+          <button id="login-btn" type="submit" class="btn btn-primary btn-block">ログイン</button>
+          <p id="login-msg" class="login-msg" role="alert" aria-live="polite"></p>
+        </form>
+        <p class="login-note">
+          暗証番号がわからない場合や、うまくログインできない場合は
+          公式LINEからお問い合わせください。
+        </p>
+      </div>
+
+      <!-- ダッシュボード -->
+      <div id="dash" hidden></div>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ GAS_URL }} is:inline>
+  const loginBox = document.getElementById('login');
+  const dash = document.getElementById('dash');
+  const form = document.getElementById('login-form');
+  const msg = document.getElementById('login-msg');
+  const btn = document.getElementById('login-btn');
+  const noEl = document.getElementById('memberNo');
+  const pinEl = document.getElementById('pin');
+
+  const esc = (s) =>
+    String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+    );
+  const chips = (arr, cls) =>
+    (arr && arr.length)
+      ? arr.map((x) => `<span class="chip ${cls}">${esc(x)}</span>`).join('')
+      : '<span class="chip-empty">まだありません</span>';
+
+  function renderDash(d) {
+    loginBox.hidden = true;
+    dash.hidden = false;
+    const teller = d.tellerName ? `<span class="teller">占い師名：${esc(d.tellerName)}</span>` : '';
+    const courses = (d.courses && d.courses.length)
+      ? `<ul class="course-list">${d.courses.map((c) => `<li>${esc(c)}</li>`).join('')}</ul>`
+      : '<p class="chip-empty">受講講座はまだ記録されていません。</p>';
+    dash.innerHTML = `
+      <div class="dash-head">
+        <div>
+          <p class="dash-hello">ようこそ、<strong>${esc(d.name || '会員')}</strong> さん</p>
+          <p class="dash-sub">${esc(d.memberNo || '')} ${d.memberStatus ? '／ ' + esc(d.memberStatus) : ''} ${teller}</p>
+        </div>
+        <button id="logout" class="btn btn-ghost btn-sm">ログアウト</button>
+      </div>
+
+      <div class="score-grid">
+        <div class="score-card">
+          <p class="score-label">今期得点</p>
+          <p class="score-value">${d.thisTerm != null ? esc(d.thisTerm) : '—'}<span class="score-unit">点</span></p>
+        </div>
+        <div class="score-card accent">
+          <p class="score-label">通算得点</p>
+          <p class="score-value">${d.total != null ? esc(d.total) : '—'}<span class="score-unit">点</span></p>
+        </div>
+      </div>
+
+      <div class="block">
+        <h2 class="block-h">称号</h2>
+        <div class="chip-row">${chips(d.titles, 'chip-title')}</div>
+      </div>
+      <div class="block">
+        <h2 class="block-h">認定・テスト</h2>
+        <div class="chip-row">${chips(d.certs, 'chip-cert')}</div>
+      </div>
+      <div class="block">
+        <h2 class="block-h">受講した講座</h2>
+        ${courses}
+      </div>
+    `;
+    document.getElementById('logout').addEventListener('click', () => {
+      try { sessionStorage.removeItem('fl_member'); } catch (e) {}
+      dash.hidden = true;
+      loginBox.hidden = false;
+      form.reset();
+      msg.textContent = '';
+    });
+    dash.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  async function login(memberNo, pin) {
+    btn.disabled = true;
+    btn.textContent = 'ログイン中…';
+    msg.textContent = '';
+    msg.className = 'login-msg';
+    try {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: 'member_login', memberNo, pin }),
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        try { sessionStorage.setItem('fl_member', JSON.stringify(data)); } catch (e) {}
+        renderDash(data);
+      } else {
+        msg.textContent = data.message || 'ログインできませんでした。';
+        msg.className = 'login-msg error';
+      }
+    } catch (e) {
+      msg.textContent = '通信に失敗しました。時間をおいて再度お試しください。';
+      msg.className = 'login-msg error';
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'ログイン';
+    }
+  }
+
+  form.addEventListener('submit', (e) => {
+    e.preventDefault();
+    const no = noEl.value.trim();
+    const pin = pinEl.value.trim();
+    if (!no || !pin) {
+      msg.textContent = '会員番号と暗証番号を入力してください。';
+      msg.className = 'login-msg error';
+      return;
+    }
+    login(no, pin);
+  });
+
+  // セッション中は再ログイン不要
+  try {
+    const saved = sessionStorage.getItem('fl_member');
+    if (saved) renderDash(JSON.parse(saved));
+  } catch (e) {}
+</script>
+
+<style>
+  .narrow { max-width: 640px; }
+  .panel {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem;
+  }
+  .login-lead { color: var(--color-text-muted); line-height: 1.8; margin-bottom: 1.5rem; text-align: center; }
+  .login-form { display: grid; gap: 1rem; }
+  .field { display: grid; gap: 0.4rem; }
+  .field-label { font-weight: 700; font-size: 0.9rem; }
+  .field input {
+    width: 100%; padding: 0.8rem 1rem;
+    border: 2px solid var(--color-border); border-radius: 10px;
+    font-size: 1.05rem; background: var(--color-bg); color: var(--color-text);
+  }
+  .field input:focus { outline: none; border-color: var(--color-primary); }
+  .btn-block { width: 100%; }
+  .btn-sm { padding: 0.4rem 0.9rem; font-size: 0.85rem; }
+  .login-msg { text-align: center; font-size: 0.9rem; min-height: 1.2em; }
+  .login-msg.error { color: #d33; }
+  .login-note {
+    margin-top: 1.3rem; padding-top: 1.1rem; border-top: 1px solid var(--color-border);
+    color: var(--color-text-muted); font-size: 0.85rem; text-align: center; line-height: 1.7;
+  }
+
+  .dash-head {
+    display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
+    padding-bottom: 1.2rem; margin-bottom: 1.2rem; border-bottom: 2px solid var(--color-border);
+  }
+  .dash-hello { font-size: 1.15rem; }
+  .dash-sub { color: var(--color-text-muted); font-size: 0.88rem; margin-top: 0.3rem; }
+  .teller { display: inline-block; margin-left: 0.3rem; }
+
+  .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem; }
+  .score-card {
+    background: var(--color-bg-soft); border: 1px solid var(--color-border);
+    border-radius: 14px; padding: 1.3rem 1rem; text-align: center;
+  }
+  .score-card.accent { border-color: var(--color-primary); }
+  .score-label { color: var(--color-text-muted); font-size: 0.85rem; }
+  .score-value { font-size: 2.4rem; font-weight: 800; color: var(--color-primary-soft); line-height: 1.1; margin-top: 0.3rem; }
+  .score-unit { font-size: 1rem; font-weight: 600; margin-left: 0.15rem; }
+
+  .block { margin-bottom: 1.5rem; }
+  .block-h { font-size: 1.05rem; margin-bottom: 0.7rem; color: var(--color-primary-soft); }
+  .chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .chip {
+    border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.85rem;
+    border: 1px solid var(--color-border); background: var(--color-bg-soft);
+  }
+  .chip-title { border-color: var(--color-accent); color: var(--color-accent-soft); }
+  .chip-cert { color: var(--color-primary-soft); }
+  .chip-empty { color: var(--color-text-muted); font-size: 0.88rem; }
+  .course-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--color-text-muted); font-size: 0.92rem; }
+</style>

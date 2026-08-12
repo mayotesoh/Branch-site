@@ -59,6 +59,11 @@ function doPost(e) {
       return handleOfflineCharge(data); // OfflinePayment.gs（お客様がカードで支払い）
     }
 
+    // (F) 会員ページ ログイン（会員番号＋暗証番号）→ スコア・評定を返す
+    if (data && data.action === 'member_login') {
+      return handleMemberLogin(data); // MemberPortal.gs
+    }
+
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);
   } catch (err) {
