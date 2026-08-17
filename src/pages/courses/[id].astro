@@ -117,11 +117,18 @@ const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPri
         ) : (
           <div class="c-block contact-block">
             <h2 class="c-h2">お申し込み・ご相談</h2>
-            <p class="c-desc">この講座は公式LINEにて受付・ご相談を承っています。</p>
+            <p class="c-desc">
+              お申し込みは、公式LINEに下記のメッセージをお送りください。<br />
+              担当より折り返しご案内します。
+            </p>
+            <div class="line-keyword" data-copy={`${course.name} 希望`}>
+              <span class="lk-text">「{course.name} 希望」</span>
+              <button type="button" class="lk-copy">コピー</button>
+            </div>
             <div class="contact-actions">
               {LINE_URL && (
                 <a class="btn btn-primary" href={LINE_URL} target="_blank" rel="noopener noreferrer">
-                  LINEで相談する
+                  公式LINEを開く
                 </a>
               )}
               <a class="btn btn-ghost" href={link('/courses')}>他の講座を見る</a>
@@ -213,6 +220,24 @@ const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPri
       }
     }
   }
+</script>
+
+<script is:inline>
+  document.querySelectorAll('.lk-copy').forEach(function (btn) {
+    btn.addEventListener('click', function () {
+      var box = btn.closest('.line-keyword');
+      var text = box && box.getAttribute('data-copy');
+      if (!text) return;
+      var done = function () {
+        var old = btn.textContent;
+        btn.textContent = 'コピーしました';
+        setTimeout(function () { btn.textContent = old; }, 1500);
+      };
+      if (navigator.clipboard && navigator.clipboard.writeText) {
+        navigator.clipboard.writeText(text).then(done, function () {});
+      }
+    });
+  });
 </script>
 
 <style>
@@ -420,6 +445,40 @@ const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPri
     text-align: center;
     font-size: 0.93rem;
     min-height: 1.2em;
+  }
+  /* 無料講座：LINEへ送るキーワード */
+  .line-keyword {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.8rem;
+    flex-wrap: wrap;
+    background: var(--color-bg-soft);
+    border: 2px dashed var(--color-primary);
+    border-radius: 12px;
+    padding: 0.9rem 1.1rem;
+    margin: 0.4rem 0 1.3rem;
+  }
+  .lk-text {
+    font-weight: 700;
+    color: var(--color-primary-soft);
+    font-size: 1.02rem;
+    word-break: break-word;
+  }
+  .lk-copy {
+    flex-shrink: 0;
+    border: 1px solid var(--color-primary);
+    background: var(--color-surface);
+    color: var(--color-primary-soft);
+    border-radius: 999px;
+    padding: 0.35rem 0.9rem;
+    font-size: 0.82rem;
+    font-family: inherit;
+    cursor: pointer;
+  }
+  .lk-copy:hover {
+    background: var(--color-primary);
+    color: #fff;
   }
   .result.success {
     color: var(--color-primary-soft);
