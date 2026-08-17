@@ -128,7 +128,7 @@ function handleConversation(replyToken, userId, text) {
   const state = getState(userId);
 
   if (!state || !state.step) {
-    replyText(replyToken, 'ご予約は「予約」と送るか、メニューの予約ボタンから始めてください。');
+    // 予約フロー中でない通常メッセージには反応しない（手動チャットの邪魔をしない）
     return;
   }
 
