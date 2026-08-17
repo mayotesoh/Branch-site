@@ -82,6 +82,7 @@ export function getAuthors(): Promise<Author[]> {
     _authors = (async () => {
       const rows = await queryAll(INSTR_DB, {
         filter: { property: '公開', checkbox: { equals: true } },
+        sorts: [{ property: '表示順', direction: 'ascending' }],
       });
       return rows.map((r) => {
         const p = r.properties;
