@@ -5,14 +5,10 @@ const withBase = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '
 
 const links = [
   { href: withBase('/#about'), label: 'ラボとは' },
-  { href: withBase('/about'), label: 'コミュニティ紹介' },
-  { href: withBase('/#features'), label: '学べること' },
   { href: withBase('/courses'), label: '講座紹介' },
   { href: withBase('/diagnosis'), label: '適性診断' },
-  { href: withBase('/voices'), label: '会員の声' },
   { href: withBase('/instructors'), label: '講師紹介' },
   { href: withBase('/blog'), label: 'ブログ' },
-  { href: withBase('/#community'), label: 'コミュニティ' },
   { href: withBase('/reserve'), label: '予約' },
   { href: withBase('/join'), label: '参加する' },
   { href: withBase('/member'), label: '会員ページ' },
