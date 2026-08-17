@@ -15,8 +15,10 @@
  * ----------------------------------------------------------------------
  */
 
-// LINE Developers → Messaging API → チャネルアクセストークン（長期）を貼り付け
-const LINE_CHANNEL_ACCESS_TOKEN = 'ここにチャネルアクセストークンを設定';
+// チャネルアクセストークン：スクリプトプロパティ LINE_CHANNEL_ACCESS_TOKEN を優先。
+// （プロパティに本番トークンを入れておけば、コードは触らなくてよい）
+const LINE_CHANNEL_ACCESS_TOKEN =
+  PropertiesService.getScriptProperties().getProperty('LINE_CHANNEL_ACCESS_TOKEN') || '';
 
 // 予約できるコンテンツ種別（サイトの CONTENT_TYPES と揃える）
 const LINE_CONTENT_TYPES = [
