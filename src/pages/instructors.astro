@@ -1,69 +1,59 @@
 ---
 import Layout from '../layouts/Layout.astro';
+import { getAuthors } from '../lib/notion';
 
-const base = import.meta.env.BASE_URL;
-const asset = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
-
-const instructors = [
-  {
-    name: '多喜 渼春',
-    kana: 'たき みはる',
-    image: asset('harutyan.webp'),
-    catch: 'あなたのハートをしっかりキャッチ！！',
-    role: '心から笑顔にさせる霊視鑑定師',
-    tag: '感覚派占い師＆当たる占い師養成講師',
-    arts: [
-      '霊視',
-      '透視',
-      '数秘術',
-      '前世鑑定',
-      '来世鑑定',
-      '守護霊鑑定',
-      'タロット',
-      'ルノルマン',
-      'オラクル',
-      '姓名判断',
-    ],
-  },
-];
+// Notion「講師DB」の公開メンバーを参照（公開チェックのある人だけ表示）
+const members = await getAuthors();
 ---
 
 <Layout
-  title="講師紹介｜Fortune Labo"
-  description="Fortune Laboで学べる、占い師養成講師の紹介ページです。"
+  title="運営メンバー｜Fortune Labo"
+  description="Fortune Labo を運営するメンバーの紹介ページです。"
 >
   <section class="section">
     <div class="container">
-      <h1 class="section-title">講師紹介</h1>
-      <p class="section-lead">あなたの学びを導く、養成講師</p>
+      <h1 class="section-title">運営メンバー</h1>
+      <p class="section-lead">Fortune Labo を運営し、あなたの学びを支えるメンバーです。</p>
 
-      <div class="instructor-list">
-        {
-          instructors.map((t) => (
-            <article class="instructor">
-              <div class="photo">
-                <img src={t.image} alt={`${t.name}の写真`} loading="lazy" />
-              </div>
-              <div class="profile">
-                <p class="catch">{t.catch}</p>
-                <h2 class="name">
-                  {t.name}
-                  <span class="kana">{t.kana}</span>
-                </h2>
-                <p class="role">{t.role}</p>
-                <p class="tag">{t.tag}</p>
+      {
+        members.length === 0 ? (
+          <p class="empty">現在、公開中の運営メンバーはいません。</p>
+        ) : (
+          <div class="instructor-list">
+            {members.map((m) => (
+              <article class="instructor">
+                <div class="photo">
+                  {m.image ? (
+                    <img src={m.image} alt={`${m.name}の写真`} loading="lazy" />
+                  ) : (
+                    <div class="photo-fallback" aria-hidden="true">
+                      {m.name.trim().charAt(0)}
+                    </div>
+                  )}
+                </div>
+                <div class="profile">
+                  <h2 class="name">
+                    {m.name}
+                    {m.kana && <span class="kana">{m.kana}</span>}
+                  </h2>
+                  {m.role && <p class="role">{m.role}</p>}
 
-                <h3 class="arts-title">主な占術</h3>
-                <ul class="arts">
-                  {t.arts.map((a) => (
-                    <li>{a}</li>
-                  ))}
-                </ul>
-              </div>
-            </article>
-          ))
-        }
-      </div>
+                  {m.arts.length > 0 && (
+                    <>
+                      <h3 class="arts-title">主な占術・専門</h3>
+                      <ul class="arts">
+                        {m.arts.map((a) => (
+                          <li>{a}</li>
+                        ))}
+                      </ul>
+                    </>
+                  )}
+                </div>
+              </article>
+            ))}
+          </div>
+        )
+      }
     </div>
   </section>
 </Layout>
@@ -74,6 +64,11 @@ const instructors = [
     gap: 2.5rem;
     max-width: 880px;
     margin-inline: auto;
+  }
+  .empty {
+    text-align: center;
+    color: var(--color-text-muted);
+    margin-top: 2rem;
   }
   .instructor {
     display: grid;
@@ -93,10 +88,19 @@ const instructors = [
     border: 1px solid var(--color-border);
     display: block;
   }
-  .catch {
-    color: var(--color-accent);
-    font-weight: 600;
-    margin-bottom: 0.5rem;
+  .photo-fallback {
+    width: 100%;
+    aspect-ratio: 1 / 1;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    border-radius: var(--radius);
+    border: 1px solid var(--color-border);
+    background: var(--color-bg-soft);
+    color: var(--color-primary-soft);
+    font-family: var(--font-serif);
+    font-size: 4rem;
+    font-weight: 700;
   }
   .name {
     font-size: 1.6rem;
@@ -114,11 +118,6 @@ const instructors = [
   }
   .role {
     color: var(--color-primary-soft);
-    margin-bottom: 0.3rem;
-  }
-  .tag {
-    color: var(--color-text-muted);
-    font-size: 0.9rem;
     margin-bottom: 1.5rem;
   }
   .arts-title {

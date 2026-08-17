@@ -42,6 +42,7 @@ export interface Author {
   kana: string;
   role: string;
   image: string;
+  arts: string[];
 }
 export interface PostMeta {
   slug: string;
@@ -91,6 +92,7 @@ export function getAuthors(): Promise<Author[]> {
           kana: pText(p['よみ']),
           role: pText(p['肩書き']),
           image: pFile(p['顔写真']),
+          arts: pMulti(p['占術']),
         } as Author;
       });
     })();
