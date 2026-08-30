@@ -13,25 +13,25 @@ const instaPosts = await getInstaPosts();
 const features = [
   {
     icon: '🔮',
-    img: 'feat-tarot.webp',
+    img: 'feat-tarot.webp?v=3',
     title: '占術の基礎を学ぶ',
     desc: 'タロット・西洋占星術・東洋占術など、各占術の基礎から体系的に学べる学習コンテンツを用意します。',
   },
   {
     icon: '🗣️',
-    img: 'feat-reading.webp?v=2',
+    img: 'feat-reading.webp?v=3',
     title: 'リーディング実践',
     desc: '実際の鑑定を想定したロールプレイや相互練習で、伝える力・聴く力を磨きます。',
   },
   {
     icon: '🌱',
-    img: 'feat-activity.webp',
+    img: 'feat-activity.webp?v=3',
     title: '活動の広げ方',
     desc: '集客・料金設定・SNS発信・対面/オンライン鑑定など、占い師として活動するノウハウを共有します。',
   },
   {
     icon: '🤝',
-    img: 'feat-community.webp',
+    img: 'feat-community.webp?v=3',
     title: '仲間とのつながり',
     desc: '同じ志を持つ仲間と悩みを相談し合い、互いに高め合えるコミュニティです。',
   },
@@ -106,8 +106,8 @@ const steps = [
                   <img
                     class="card-photo"
                     src={`${base.replace(/\/$/, '')}/${f.img}`}
-                    width="88"
-                    height="88"
+                    width="640"
+                    height="360"
                     alt=""
                     loading="lazy"
                   />
@@ -319,16 +319,16 @@ const steps = [
   }
   /* 丸フレームのアイコン/写真 */
   .card-media {
-    width: 88px;
-    height: 88px;
-    border-radius: 50%;
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    border-radius: 12px;
     overflow: hidden;
-    margin-bottom: 1rem;
+    margin-bottom: 1.1rem;
     display: flex;
     align-items: center;
     justify-content: center;
     background: var(--color-bg-soft);
-    border: 2px solid var(--color-accent);
+    border: 1px solid var(--color-border);
     box-shadow: 0 6px 18px rgba(26, 36, 64, 0.12);
   }
   .card-photo {
