@@ -43,6 +43,13 @@ export interface Author {
   role: string;
   image: string;
   arts: string[];
+  sns: {
+    instagram: string;
+    facebook: string;
+    x: string;
+    tiktok: string;
+    youtube: string;
+  };
 }
 export interface PostMeta {
   slug: string;
@@ -94,6 +101,13 @@ export function getAuthors(): Promise<Author[]> {
           role: pText(p['肩書き']),
           image: pFile(p['顔写真']),
           arts: pMulti(p['占術']),
+          sns: {
+            instagram: p['Instagram']?.url ?? '',
+            facebook: p['Facebook']?.url ?? '',
+            x: p['X']?.url ?? '',
+            tiktok: p['TikTok']?.url ?? '',
+            youtube: p['YouTube']?.url ?? '',
+          },
         } as Author;
       });
     })();
