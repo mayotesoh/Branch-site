@@ -11,6 +11,13 @@ export const SISTER_SITE_NAME = 'Fortune Grace';
 export const SISTER_SITE_DESC = '占い鑑定';
 
 /**
+ * サイト作成のご相談（制作者ページ）
+ * フッターの「サイト作成希望者」リンク先。
+ */
+export const SITE_REQUEST_URL = 'https://mayonery.jp/website/';
+
+
+/**
  * Instagram プロフィールURL（「フォローはこちら」導線に使用）
  * 例：'https://www.instagram.com/branch_uranai/'
  * 空文字ならフォローボタンは表示されません。
