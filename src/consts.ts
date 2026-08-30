@@ -1,13 +1,13 @@
 // サイト全体で使う共通定数
 
 /**
- * 姉妹サイト（Lab online（仮））へのリンク
+ * 姉妹サイト（Fortune Grace）へのリンク
  * Fortune Labo は占い師向けの学び・育成コミュニティ。
- * Lab online（仮） は Fortune Labo 出身の占い師が相談者を鑑定する鑑定サイト。
+ * Fortune Grace は Fortune Labo 出身の占い師が相談者を鑑定する鑑定サイト。
  * ※ base が異なるため相手サイトへは絶対URLでリンクする。
  */
-export const SISTER_SITE_URL = 'https://mayotesoh.github.io/fortune-lab/';
-export const SISTER_SITE_NAME = 'Lab online（仮）';
+export const SISTER_SITE_URL = 'https://mayotesoh.github.io/fortunegrace/';
+export const SISTER_SITE_NAME = 'Fortune Grace';
 export const SISTER_SITE_DESC = '占い鑑定';
 
 /**
