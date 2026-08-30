@@ -45,25 +45,16 @@ const steps = [
 <Layout>
   <!-- Hero -->
   <section class="hero">
-    <div class="hero-visual">
-      <img
-        class="hero-sky"
-        src={`${base.replace(/\/$/, '')}/hero3.webp`}
-        width="1920"
-        height="1080"
-        alt=""
-        fetchpriority="high"
-      />
+    <div class="container hero-inner">
       <h1 class="hero-wordmark">
         <img
           src={`${base.replace(/\/$/, '')}/wordmark2.webp`}
           width="1748"
           height="204"
           alt="Fortune Labo ─ 占い師のための教育コミュニティ"
+          fetchpriority="high"
         />
       </h1>
-    </div>
-    <div class="container hero-inner">
       <p class="hero-title">
         稼げる占い師を、<wbr />育成する場所。
       </p>
@@ -200,33 +191,26 @@ const steps = [
 <style>
   /* ロゴの夜空に合わせたネイビーのヒーロー */
   .hero {
-    padding-block: 2.5rem 4.5rem;
+    padding-block: 6.5rem;
     text-align: center;
     color: #fff;
-    background: #0e1836;
+    position: relative;
+    overflow: hidden;
+    /* 夜空を全面背景に。暗いオーバーレイで前面の文字を可読に */
+    background:
+      linear-gradient(180deg, rgba(9, 16, 38, 0.28) 0%, rgba(9, 16, 38, 0.26) 45%, rgba(9, 16, 38, 0.6) 100%),
+      url('/hero3.webp') center / cover no-repeat;
+    background-color: #0e1836;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
-  /* 夜空ビジュアル（切れないよう全体表示）＋中央にロゴを重ねる */
-  .hero-visual {
+  .hero-inner {
     position: relative;
-    max-width: 1100px;
-    margin: 0 auto 2.2rem;
-    border-radius: 16px;
-    overflow: hidden;
-    box-shadow: 0 18px 50px rgba(0, 0, 0, 0.5);
+    z-index: 1;
   }
-  .hero-sky {
-    display: block;
-    width: 100%;
-    height: auto; /* アスペクト維持＝上下が切れない */
-  }
+  /* ロゴ（白文字・透過）を中央に */
   .hero-wordmark {
-    position: absolute;
-    top: 50%;
-    left: 50%;
-    transform: translate(-50%, -50%);
-    width: min(60%, 640px);
-    margin: 0;
+    margin: 0 auto 1.6rem;
+    max-width: min(580px, 86vw);
     line-height: 0;
   }
   .hero-wordmark img {
