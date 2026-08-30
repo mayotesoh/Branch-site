@@ -2,7 +2,6 @@
 import Layout from '../layouts/Layout.astro';
 import LineButton from '../components/LineButton.astro';
 
-const base = import.meta.env.BASE_URL;
 ---
 
 <Layout title="参加する｜Fortune Labo" description="Fortune Laboコミュニティへの参加方法をご案内します。">
@@ -15,12 +14,11 @@ const base = import.meta.env.BASE_URL;
       </p>
 
       <div class="line-cta">
-        <p class="line-cta-title">📅 ご予約・ご参加はこちらから</p>
+        <p class="line-cta-title">📱 ご予約・ご参加はこちらから</p>
         <p class="line-cta-desc">
-          予約フォームから日時を選んで送信、または公式LINEから直接ご連絡ください。
+          公式LINEを友だち追加して、ご希望の内容（ご予約・ご参加・ご相談）をそのままメッセージでお送りください。担当より順次ご案内します。
         </p>
         <div class="line-cta-actions">
-          <a class="btn btn-primary" href={`${base}reserve`}>予約フォームへ</a>
           <LineButton label="LINEで友だち追加" />
         </div>
       </div>
