@@ -9,6 +9,34 @@
  * ----------------------------------------------------------------------
  */
 
+// 鑑定ロープレ評価DB（会員番号で照合・最新1件を返す）
+const MP_EVAL_DB = '3cc76a17-0aae-81aa-a916-f611abe889b2';
+const MP_EVAL_ITEMS = ['声・話し方', '聞く姿勢', '言葉選び', '鑑定の流れ', '鑑定内容', '安心感'];
+
+/** その会員の最新評価を1件返す（無ければ null） */
+function mpLatestEval_(memberNo) {
+  try {
+    const body = cpApi_('databases/' + MP_EVAL_DB + '/query', 'post', {
+      page_size: 1,
+      filter: { property: '会員番号', rich_text: { equals: memberNo } },
+      sorts: [{ property: '評価日', direction: 'descending' }],
+    });
+    if (!body.results || !body.results.length) return null;
+    const p = body.results[0].properties;
+    const num = function (k) { return (p[k] && typeof p[k].number === 'number') ? p[k].number : null; };
+    const scores = {};
+    MP_EVAL_ITEMS.forEach(function (k) { scores[k] = num(k); });
+    return {
+      date: (p['評価日'] && p['評価日'].date) ? p['評価日'].date.start : '',
+      evaluator: cpText_(p['評価者']),
+      scores: scores,
+      comment: cpText_(p['総合コメント']),
+    };
+  } catch (e) {
+    return null;
+  }
+}
+
 /** ロールアップ値を数値で取り出す（number型 / array合計 の両対応） */
 function mpRollupNumber_(prop) {
   if (!prop || prop.type !== 'rollup' || !prop.rollup) return null;
@@ -71,6 +99,7 @@ function handleMemberLogin(data) {
     titles: multi('称号'),
     certs: multi('認定/テスト'),
     courses: courses,
+    evaluation: mpLatestEval_(cpText_(p['会員番号']) || no),
   });
 }
 

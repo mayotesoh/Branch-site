@@ -61,6 +61,62 @@ import { GAS_URL } from '../consts';
       ? arr.map((x) => `<span class="chip ${cls}">${esc(x)}</span>`).join('')
       : '<span class="chip-empty">まだありません</span>';
 
+  // ── 鑑定ロープレ評価（パラメータ表示） ──
+  const EVAL_ITEMS = ['声・話し方', '聞く姿勢', '言葉選び', '鑑定の流れ', '鑑定内容', '安心感'];
+
+  function radarSVG(scores) {
+    const cx = 160, cy = 152, R = 92, N = 6, MAX = 5;
+    const ang = (i) => (-90 + i * (360 / N)) * Math.PI / 180;
+    const pt = (i, r) => [cx + r * Math.cos(ang(i)), cy + r * Math.sin(ang(i))];
+    let grid = '';
+    for (let g = 1; g <= MAX; g++) {
+      const r = (R * g) / MAX;
+      const pts = EVAL_ITEMS.map((_, i) => pt(i, r).map((v) => v.toFixed(1)).join(',')).join(' ');
+      grid += `<polygon points="${pts}" class="rad-grid"/>`;
+    }
+    let axes = '';
+    EVAL_ITEMS.forEach((_, i) => { const [x, y] = pt(i, R); axes += `<line x1="${cx}" y1="${cy}" x2="${x.toFixed(1)}" y2="${y.toFixed(1)}" class="rad-axis"/>`; });
+    const dpts = EVAL_ITEMS.map((k, i) => { const v = Math.max(0, Math.min(MAX, scores[k] || 0)); return pt(i, (R * v) / MAX).map((n) => n.toFixed(1)).join(','); }).join(' ');
+    let dots = '', labels = '';
+    EVAL_ITEMS.forEach((k, i) => {
+      const v = Math.max(0, Math.min(MAX, scores[k] || 0));
+      const [dx, dy] = pt(i, (R * v) / MAX);
+      dots += `<circle cx="${dx.toFixed(1)}" cy="${dy.toFixed(1)}" r="3.2" class="rad-dot"/>`;
+      const [lx, ly] = pt(i, R + 15);
+      let anchor = 'middle'; if (lx > cx + 5) anchor = 'start'; else if (lx < cx - 5) anchor = 'end';
+      labels += `<text x="${lx.toFixed(1)}" y="${(ly + 4).toFixed(1)}" text-anchor="${anchor}" class="rad-label">${esc(k)}</text>`;
+    });
+    return `<svg viewBox="0 0 320 300" class="radar" role="img" aria-label="鑑定ロープレ評価レーダー">${grid}${axes}<polygon points="${dpts}" class="rad-area"/>${dots}${labels}</svg>`;
+  }
+
+  function evalBars(scores) {
+    return EVAL_ITEMS.map((k) => {
+      const v = scores[k];
+      const pct = v != null ? (v / 5) * 100 : 0;
+      return `<div class="ev-row"><span class="ev-name">${esc(k)}</span><span class="ev-bar"><span class="ev-fill" style="width:${pct}%"></span></span><span class="ev-num">${v != null ? esc(v) : '—'}</span></div>`;
+    }).join('');
+  }
+
+  function evalSection(ev) {
+    if (!ev || !ev.scores) return '';
+    const vals = EVAL_ITEMS.map((k) => ev.scores[k]).filter((v) => v != null);
+    if (!vals.length) return '';
+    const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+    const meta = [ev.date ? `評価日：${esc(ev.date)}` : '', ev.evaluator ? `評価者：${esc(ev.evaluator)}` : ''].filter(Boolean).join(' ／ ');
+    const comment = ev.comment
+      ? `<div class="eval-comment"><p class="ev-c-label">総合コメント</p><p>${esc(ev.comment)}</p></div>` : '';
+    return `
+      <div class="block eval-block">
+        <h2 class="block-h">鑑定ロープレ評価</h2>
+        ${meta ? `<p class="eval-meta">${meta}</p>` : ''}
+        <div class="eval-wrap">
+          <div class="eval-radar">${radarSVG(ev.scores)}<p class="eval-avg">平均 <strong>${avg.toFixed(1)}</strong> / 5</p></div>
+          <div class="eval-bars">${evalBars(ev.scores)}</div>
+        </div>
+        ${comment}
+      </div>`;
+  }
+
   function renderDash(d) {
     loginBox.hidden = true;
     dash.hidden = false;
@@ -87,6 +143,8 @@ import { GAS_URL } from '../consts';
           <p class="score-value">${d.total != null ? esc(d.total) : '—'}<span class="score-unit">点</span></p>
         </div>
       </div>
+
+      ${evalSection(d.evaluation)}
 
       <div class="block">
         <h2 class="block-h">称号</h2>
@@ -214,4 +272,36 @@ import { GAS_URL } from '../consts';
   .chip-cert { color: var(--color-primary-soft); }
   .chip-empty { color: var(--color-text-muted); font-size: 0.88rem; }
   .course-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--color-text-muted); font-size: 0.92rem; }
+
+  /* 鑑定ロープレ評価（パラメータ） */
+  .eval-block {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 16px;
+    padding: 1.3rem 1.3rem 1.4rem;
+  }
+  .eval-meta { color: var(--color-text-muted); font-size: 0.82rem; margin: -0.3rem 0 0.8rem; }
+  .eval-wrap { display: grid; grid-template-columns: 300px 1fr; gap: 1.2rem; align-items: center; }
+  .eval-radar { text-align: center; }
+  .radar { width: 100%; max-width: 320px; height: auto; }
+  .rad-grid { fill: none; stroke: var(--color-border); stroke-width: 1; }
+  .rad-axis { stroke: var(--color-border); stroke-width: 1; }
+  .rad-area { fill: rgba(46, 74, 138, 0.28); stroke: var(--color-primary); stroke-width: 2; }
+  .rad-dot { fill: var(--color-primary); }
+  .rad-label { fill: var(--color-text-muted); font-size: 11px; font-family: var(--font-sans); }
+  .eval-avg { margin-top: 0.2rem; font-size: 0.95rem; color: var(--color-text-muted); }
+  .eval-avg strong { font-size: 1.4rem; color: var(--color-primary-soft); }
+  .eval-bars { display: grid; gap: 0.55rem; }
+  .ev-row { display: grid; grid-template-columns: 6.5em 1fr 1.6em; align-items: center; gap: 0.6rem; font-size: 0.86rem; }
+  .ev-name { color: var(--color-text); white-space: nowrap; }
+  .ev-bar { height: 9px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+  .ev-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--color-primary-soft), var(--color-primary)); }
+  .ev-num { text-align: right; font-weight: 700; color: var(--color-primary-soft); }
+  .eval-comment { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--color-border); }
+  .ev-c-label { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.3rem; color: var(--color-primary-soft); }
+  .eval-comment p:last-child { color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8; }
+
+  @media (max-width: 560px) {
+    .eval-wrap { grid-template-columns: 1fr; }
+  }
 </style>
