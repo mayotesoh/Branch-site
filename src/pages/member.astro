@@ -243,65 +243,69 @@ import { GAS_URL } from '../consts';
     color: var(--color-text-muted); font-size: 0.85rem; text-align: center; line-height: 1.7;
   }
 
-  .dash-head {
+</style>
+
+<!-- ダッシュボードはJSのinnerHTMLで生成されるため、#dash配下のグローバルCSSにする -->
+<style is:global>
+  #dash .dash-head {
     display: flex; justify-content: space-between; align-items: flex-start; gap: 1rem;
     padding-bottom: 1.2rem; margin-bottom: 1.2rem; border-bottom: 2px solid var(--color-border);
   }
-  .dash-hello { font-size: 1.15rem; }
-  .dash-sub { color: var(--color-text-muted); font-size: 0.88rem; margin-top: 0.3rem; }
-  .teller { display: inline-block; margin-left: 0.3rem; }
+  #dash .dash-hello { font-size: 1.15rem; }
+  #dash .dash-sub { color: var(--color-text-muted); font-size: 0.88rem; margin-top: 0.3rem; }
+  #dash .teller { display: inline-block; margin-left: 0.3rem; }
 
-  .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem; }
-  .score-card {
+  #dash .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem; }
+  #dash .score-card {
     background: var(--color-bg-soft); border: 1px solid var(--color-border);
     border-radius: 14px; padding: 1.3rem 1rem; text-align: center;
   }
-  .score-card.accent { border-color: var(--color-primary); }
-  .score-label { color: var(--color-text-muted); font-size: 0.85rem; }
-  .score-value { font-size: 2.4rem; font-weight: 800; color: var(--color-primary-soft); line-height: 1.1; margin-top: 0.3rem; }
-  .score-unit { font-size: 1rem; font-weight: 600; margin-left: 0.15rem; }
+  #dash .score-card.accent { border-color: var(--color-primary); }
+  #dash .score-label { color: var(--color-text-muted); font-size: 0.85rem; }
+  #dash .score-value { font-size: 2.4rem; font-weight: 800; color: var(--color-primary-soft); line-height: 1.1; margin-top: 0.3rem; }
+  #dash .score-unit { font-size: 1rem; font-weight: 600; margin-left: 0.15rem; }
 
-  .block { margin-bottom: 1.5rem; }
-  .block-h { font-size: 1.05rem; margin-bottom: 0.7rem; color: var(--color-primary-soft); }
-  .chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
-  .chip {
+  #dash .block { margin-bottom: 1.5rem; }
+  #dash .block-h { font-size: 1.05rem; margin-bottom: 0.7rem; color: var(--color-primary-soft); }
+  #dash .chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  #dash .chip {
     border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.85rem;
     border: 1px solid var(--color-border); background: var(--color-bg-soft);
   }
-  .chip-title { border-color: var(--color-accent); color: var(--color-accent-soft); }
-  .chip-cert { color: var(--color-primary-soft); }
-  .chip-empty { color: var(--color-text-muted); font-size: 0.88rem; }
-  .course-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--color-text-muted); font-size: 0.92rem; }
+  #dash .chip-title { border-color: var(--color-accent); color: var(--color-accent-soft); }
+  #dash .chip-cert { color: var(--color-primary-soft); }
+  #dash .chip-empty { color: var(--color-text-muted); font-size: 0.88rem; }
+  #dash .course-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--color-text-muted); font-size: 0.92rem; }
 
   /* 鑑定ロープレ評価（パラメータ） */
-  .eval-block {
+  #dash .eval-block {
     background: var(--color-bg-soft);
     border: 1px solid var(--color-border);
     border-radius: 16px;
     padding: 1.3rem 1.3rem 1.4rem;
   }
-  .eval-meta { color: var(--color-text-muted); font-size: 0.82rem; margin: -0.3rem 0 0.8rem; }
-  .eval-wrap { display: grid; grid-template-columns: 300px 1fr; gap: 1.2rem; align-items: center; }
-  .eval-radar { text-align: center; }
-  .radar { width: 100%; max-width: 320px; height: auto; }
-  .rad-grid { fill: none; stroke: var(--color-border); stroke-width: 1; }
-  .rad-axis { stroke: var(--color-border); stroke-width: 1; }
-  .rad-area { fill: rgba(46, 74, 138, 0.28); stroke: var(--color-primary); stroke-width: 2; }
-  .rad-dot { fill: var(--color-primary); }
-  .rad-label { fill: var(--color-text-muted); font-size: 11px; font-family: var(--font-sans); }
-  .eval-avg { margin-top: 0.2rem; font-size: 0.95rem; color: var(--color-text-muted); }
-  .eval-avg strong { font-size: 1.4rem; color: var(--color-primary-soft); }
-  .eval-bars { display: grid; gap: 0.55rem; }
-  .ev-row { display: grid; grid-template-columns: 6.5em 1fr 1.6em; align-items: center; gap: 0.6rem; font-size: 0.86rem; }
-  .ev-name { color: var(--color-text); white-space: nowrap; }
-  .ev-bar { height: 9px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
-  .ev-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--color-primary-soft), var(--color-primary)); }
-  .ev-num { text-align: right; font-weight: 700; color: var(--color-primary-soft); }
-  .eval-comment { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--color-border); }
-  .ev-c-label { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.3rem; color: var(--color-primary-soft); }
-  .eval-comment p:last-child { color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8; }
+  #dash .eval-meta { color: var(--color-text-muted); font-size: 0.82rem; margin: -0.3rem 0 0.8rem; }
+  #dash .eval-wrap { display: grid; grid-template-columns: 300px 1fr; gap: 1.2rem; align-items: center; }
+  #dash .eval-radar { text-align: center; }
+  #dash .radar { width: 100%; max-width: 320px; height: auto; }
+  #dash .rad-grid { fill: none; stroke: var(--color-border); stroke-width: 1; }
+  #dash .rad-axis { stroke: var(--color-border); stroke-width: 1; }
+  #dash .rad-area { fill: rgba(46, 74, 138, 0.28); stroke: var(--color-primary); stroke-width: 2; }
+  #dash .rad-dot { fill: var(--color-primary); }
+  #dash .rad-label { fill: var(--color-text-muted); font-size: 11px; font-family: var(--font-sans); }
+  #dash .eval-avg { margin-top: 0.2rem; font-size: 0.95rem; color: var(--color-text-muted); }
+  #dash .eval-avg strong { font-size: 1.4rem; color: var(--color-primary-soft); }
+  #dash .eval-bars { display: grid; gap: 0.55rem; }
+  #dash .ev-row { display: grid; grid-template-columns: 6.5em 1fr 1.6em; align-items: center; gap: 0.6rem; font-size: 0.86rem; }
+  #dash .ev-name { color: var(--color-text); white-space: nowrap; }
+  #dash .ev-bar { height: 9px; border-radius: 999px; background: var(--color-border); overflow: hidden; }
+  #dash .ev-fill { display: block; height: 100%; border-radius: 999px; background: linear-gradient(90deg, var(--color-primary-soft), var(--color-primary)); }
+  #dash .ev-num { text-align: right; font-weight: 700; color: var(--color-primary-soft); }
+  #dash .eval-comment { margin-top: 1.1rem; padding-top: 1rem; border-top: 1px solid var(--color-border); }
+  #dash .ev-c-label { font-weight: 700; font-size: 0.85rem; margin-bottom: 0.3rem; color: var(--color-primary-soft); }
+  #dash .eval-comment p:last-child { color: var(--color-text-muted); font-size: 0.92rem; line-height: 1.8; }
 
   @media (max-width: 560px) {
-    .eval-wrap { grid-template-columns: 1fr; }
+    #dash .eval-wrap { grid-template-columns: 1fr; }
   }
 </style>
