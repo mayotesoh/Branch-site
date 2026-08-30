@@ -2,13 +2,18 @@
 import Layout from '../layouts/Layout.astro';
 import LineButton from '../components/LineButton.astro';
 import { INSTAGRAM_URL } from '../consts';
-import { getInstaPosts } from '../lib/notion';
+import { getInstaPosts, getPosts } from '../lib/notion';
 
 const base = import.meta.env.BASE_URL;
 const joinUrl = `${base.replace(/\/$/, '')}/join`;
 const aboutUrl = `${base.replace(/\/$/, '')}/about`;
+const blogUrl = `${base.replace(/\/$/, '')}/blog`;
+const postUrl = (slug: string) => `${base.replace(/\/$/, '')}/blog/${slug}`;
+const fmtDate = (d: Date) =>
+  `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 
 const instaPosts = await getInstaPosts();
+const latestPosts = (await getPosts()).slice(0, 3);
 
 const features = [
   {
@@ -142,6 +147,42 @@ const steps = [
       </div>
     </div>
   </section>
+
+  <!-- Latest Blog -->
+  {
+    latestPosts.length > 0 && (
+      <section class="section section-alt">
+        <div class="container">
+          <h2 class="section-title">最新のブログ</h2>
+          <p class="section-lead">Fortune Laboの占い師が綴る、学びと気づき</p>
+          <ul class="blog-grid">
+            {latestPosts.map((post) => (
+              <li class="blog-card">
+                <a class="blog-card-link" href={postUrl(post.slug)}>
+                  {post.cover && (
+                    <div class="blog-cover">
+                      <img src={post.cover} alt="" loading="lazy" />
+                    </div>
+                  )}
+                  <div class="blog-body">
+                    <div class="blog-meta">
+                      <span>{fmtDate(post.publishDate)}</span>
+                      {post.authorName && <span class="blog-author">{post.authorName}</span>}
+                    </div>
+                    <h3 class="blog-title">{post.title}</h3>
+                    {post.excerpt && <p class="blog-excerpt">{post.excerpt}</p>}
+                  </div>
+                </a>
+              </li>
+            ))}
+          </ul>
+          <div class="blog-more">
+            <a class="btn btn-primary" href={blogUrl}>ブログをもっと見る →</a>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   <!-- Instagram -->
   {
@@ -287,6 +328,71 @@ const steps = [
   .insta-follow {
     text-align: center;
     margin-top: 2rem;
+  }
+
+  /* 最新のブログ */
+  .blog-grid {
+    list-style: none;
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+    gap: 1.5rem;
+    max-width: 980px;
+    margin-inline: auto;
+  }
+  .blog-card {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    overflow: hidden;
+    transition: transform 0.15s ease, box-shadow 0.2s ease, border-color 0.2s ease;
+  }
+  .blog-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-primary);
+    box-shadow: 0 12px 28px rgba(26, 36, 64, 0.14);
+  }
+  .blog-card-link {
+    display: block;
+    color: inherit;
+    height: 100%;
+  }
+  .blog-cover img {
+    width: 100%;
+    aspect-ratio: 16 / 9;
+    object-fit: cover;
+    display: block;
+  }
+  .blog-body {
+    padding: 1.2rem 1.4rem 1.5rem;
+  }
+  .blog-meta {
+    display: flex;
+    gap: 0.8rem;
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+  }
+  .blog-author::before {
+    content: '✦ ';
+    color: var(--color-accent);
+  }
+  .blog-title {
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+    line-height: 1.5;
+  }
+  .blog-excerpt {
+    color: var(--color-text-muted);
+    font-size: 0.9rem;
+    line-height: 1.7;
+    display: -webkit-box;
+    -webkit-line-clamp: 3;
+    -webkit-box-orient: vertical;
+    overflow: hidden;
+  }
+  .blog-more {
+    text-align: center;
+    margin-top: 2.2rem;
   }
 
   .about-grid {
