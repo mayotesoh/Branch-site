@@ -1,15 +1,15 @@
 :root {
-  /* カラーパレット ─ バイオレット × ゴールド */
-  --color-bg: #f6f4ff;
-  --color-bg-soft: #ece7fb;
+  /* カラーパレット ─ ネイビー × ゴールド（ロゴ「夜空＋流れ星」準拠） */
+  --color-bg: #f4f6fb;
+  --color-bg-soft: #e8edf7;
   --color-surface: #ffffff;
-  --color-border: #e0d7f6;
-  --color-text: #241c40;
-  --color-text-muted: #6a6291;
-  --color-accent: #c2a14a;
-  --color-accent-soft: #a07f2e;
-  --color-primary: #5f2fff;
-  --color-primary-soft: #4a1fd6;
+  --color-border: #d8e0f0;
+  --color-text: #1a2440;
+  --color-text-muted: #5a6689;
+  --color-accent: #d9a64c;
+  --color-accent-soft: #b5842f;
+  --color-primary: #2e4a8a;
+  --color-primary-soft: #21386b;
 
   --font-sans: "Hiragino Kaku Gothic ProN", "Noto Sans JP", "Yu Gothic",
     "Meiryo", system-ui, sans-serif;

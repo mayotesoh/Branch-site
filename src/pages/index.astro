@@ -44,9 +44,17 @@ const steps = [
   <!-- Hero -->
   <section class="hero">
     <div class="container hero-inner">
+      <img
+        class="hero-logo"
+        src={`${base.replace(/\/$/, '')}/logo.webp`}
+        width="220"
+        height="220"
+        alt="Fortune Labo ロゴ"
+        fetchpriority="high"
+      />
       <p class="hero-eyebrow">占い師のための教育コミュニティ</p>
       <h1 class="hero-title">
-        Fortune Labo ─<br />稼げる占い師を<wbr />育成する場所。
+        稼げる占い師を、<wbr />育成する場所。
       </h1>
       <p class="hero-lead">
         Fortune Labo（フォーチュンラボ）は、占いを「仕事」にして稼げる占い師を育てる教育コミュニティです。<br />
@@ -166,35 +174,84 @@ const steps = [
 </Layout>
 
 <style>
+  /* ロゴの夜空に合わせたネイビーのヒーロー */
   .hero {
-    padding-block: 6rem 5rem;
+    padding-block: 4.5rem 5rem;
     text-align: center;
+    color: #fff;
+    position: relative;
+    overflow: hidden;
+    background:
+      radial-gradient(620px 320px at 22% 12%, rgba(217, 166, 76, 0.14), transparent 62%),
+      radial-gradient(1200px 640px at 50% -12%, #2c3f78 0%, #182750 46%, #0e1836 100%);
+    border-bottom: 1px solid rgba(255, 255, 255, 0.06);
+  }
+  /* 星の粒（さりげなく） */
+  .hero::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    pointer-events: none;
+    background-image:
+      radial-gradient(1.4px 1.4px at 15% 30%, rgba(255, 255, 255, 0.7), transparent),
+      radial-gradient(1.2px 1.2px at 70% 20%, rgba(255, 255, 255, 0.6), transparent),
+      radial-gradient(1.6px 1.6px at 85% 55%, rgba(255, 255, 255, 0.55), transparent),
+      radial-gradient(1.2px 1.2px at 35% 70%, rgba(255, 255, 255, 0.55), transparent),
+      radial-gradient(1.3px 1.3px at 55% 40%, rgba(255, 255, 255, 0.5), transparent),
+      radial-gradient(1.1px 1.1px at 92% 25%, rgba(255, 255, 255, 0.5), transparent);
+    opacity: 0.9;
+  }
+  .hero-inner {
+    position: relative;
+    z-index: 1;
+  }
+  .hero-logo {
+    width: min(200px, 46vw);
+    height: auto;
+    aspect-ratio: 1 / 1;
+    border-radius: 50%;
+    display: block;
+    margin: 0 auto 1.6rem;
+    box-shadow:
+      0 14px 44px rgba(0, 0, 0, 0.45),
+      0 0 0 1px rgba(255, 255, 255, 0.1);
   }
   .hero-eyebrow {
     color: var(--color-accent);
     letter-spacing: 0.2em;
     font-size: 0.85rem;
-    margin-bottom: 1.2rem;
+    margin-bottom: 1.1rem;
   }
   .hero-title {
-    font-size: clamp(2rem, 6vw, 3.4rem);
-    margin-bottom: 1.5rem;
+    font-size: clamp(2rem, 6vw, 3.2rem);
+    margin-bottom: 1.4rem;
+    color: #fff;
     /* 日本語見出しを文字単位で割らず、<wbr> の位置でだけ折り返す */
     word-break: keep-all;
     line-break: strict;
     overflow-wrap: normal;
   }
   .hero-lead {
-    color: var(--color-text-muted);
+    color: rgba(255, 255, 255, 0.82);
     max-width: 640px;
     margin-inline: auto;
-    margin-bottom: 2.5rem;
+    margin-bottom: 2.4rem;
   }
   .hero-actions {
     display: flex;
     gap: 1rem;
     justify-content: center;
     flex-wrap: wrap;
+  }
+  /* 暗いヒーロー上ではゴーストボタンを明色に */
+  .hero .btn-ghost {
+    border-color: rgba(255, 255, 255, 0.45);
+    color: #fff;
+  }
+  .hero .btn-ghost:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+    background: rgba(255, 255, 255, 0.04);
   }
 
   .section-alt {
