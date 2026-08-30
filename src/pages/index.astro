@@ -176,30 +176,17 @@ const steps = [
 <style>
   /* ロゴの夜空に合わせたネイビーのヒーロー */
   .hero {
-    padding-block: 4.5rem 5rem;
+    padding-block: 5rem 5.5rem;
     text-align: center;
     color: #fff;
     position: relative;
     overflow: hidden;
+    /* 夜空＋流れ星の実写背景（暗いオーバーレイで文字を可読に） */
     background:
-      radial-gradient(620px 320px at 22% 12%, rgba(217, 166, 76, 0.14), transparent 62%),
-      radial-gradient(1200px 640px at 50% -12%, #2c3f78 0%, #182750 46%, #0e1836 100%);
+      linear-gradient(180deg, rgba(9, 16, 38, 0.45) 0%, rgba(9, 16, 38, 0.32) 42%, rgba(9, 16, 38, 0.74) 100%),
+      url('/hero-bg.webp') center / cover no-repeat;
+    background-color: #0e1836;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
-  }
-  /* 星の粒（さりげなく） */
-  .hero::after {
-    content: '';
-    position: absolute;
-    inset: 0;
-    pointer-events: none;
-    background-image:
-      radial-gradient(1.4px 1.4px at 15% 30%, rgba(255, 255, 255, 0.7), transparent),
-      radial-gradient(1.2px 1.2px at 70% 20%, rgba(255, 255, 255, 0.6), transparent),
-      radial-gradient(1.6px 1.6px at 85% 55%, rgba(255, 255, 255, 0.55), transparent),
-      radial-gradient(1.2px 1.2px at 35% 70%, rgba(255, 255, 255, 0.55), transparent),
-      radial-gradient(1.3px 1.3px at 55% 40%, rgba(255, 255, 255, 0.5), transparent),
-      radial-gradient(1.1px 1.1px at 92% 25%, rgba(255, 255, 255, 0.5), transparent);
-    opacity: 0.9;
   }
   .hero-inner {
     position: relative;
