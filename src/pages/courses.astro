@@ -119,9 +119,9 @@ for (const c of sessionCourses) {
                 <p class="cert-course">{c.course}</p>
                 <p class="cert-target">{c.target}</p>
                 <div class="meta">
-                  <span class="badge">👤 {c.instructor}</span>
-                  <span class="badge">⏱ {c.period}</span>
-                  <span class="badge">💻 {c.online}</span>
+                  {c.instructor && <span class="badge">👤 {c.instructor}</span>}
+                  {c.period && <span class="badge">⏱ {c.period}</span>}
+                  {c.online && <span class="badge">💻 {c.online}</span>}
                   {c.afterCare && <span class="badge">2か月間 無料アフターフォロー付</span>}
                 </div>
                 <details class="curriculum">
@@ -157,9 +157,9 @@ for (const c of sessionCourses) {
                   <p class="course-title">{item.title}</p>
                   <p class="course-desc">{item.desc}</p>
                   <div class="meta">
-                    <span class="badge">👤 {item.instructor}</span>
-                    <span class="badge">⏱ {item.time}</span>
-                    <span class="badge badge-method">{item.method}</span>
+                    {item.instructor && <span class="badge">👤 {item.instructor}</span>}
+                    {item.time && <span class="badge">⏱ {item.time}</span>}
+                    {item.method && <span class="badge badge-method">{item.method}</span>}
                   </div>
                   {item.note && <p class="course-note">※ {item.note}</p>}
                   <a class="detail-link" href={courseUrl(item.id)}>詳細・お申し込み →</a>

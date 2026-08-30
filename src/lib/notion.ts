@@ -259,6 +259,18 @@ export async function getPostHtml(slug: string): Promise<string> {
   return await marked.parse(md);
 }
 
+/** スタッフ（講師DBページ）の本文＝自己紹介をHTMLで返す（空なら ''） */
+export async function getAuthorBioHtml(pageId: string): Promise<string> {
+  try {
+    const mdblocks = await n2m.pageToMarkdown(pageId);
+    const md = (n2m.toMarkdownString(mdblocks).parent ?? '').trim();
+    if (!md) return '';
+    return (await marked.parse(md)).trim();
+  } catch {
+    return '';
+  }
+}
+
 // ---- 会員の声（受講生の感想・実績） ----
 export interface Voice {
   name: string;

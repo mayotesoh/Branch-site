@@ -1,9 +1,12 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { getAuthors } from '../lib/notion';
+import { getAuthors, getAuthorBioHtml } from '../lib/notion';
 
-// Notion「講師DB」の公開メンバーを参照（公開チェックのある人だけ表示）
-const members = await getAuthors();
+// Notion「スタッフDB」の公開メンバー＋各ページ本文（自己紹介）を取得
+const baseMembers = await getAuthors();
+const members = await Promise.all(
+  baseMembers.map(async (m) => ({ ...m, bio: await getAuthorBioHtml(m.pageId) }))
+);
 
 const base = import.meta.env.BASE_URL;
 const blogUrl = (id: string) => `${base.replace(/\/$/, '')}/blog/author/${id}`;
@@ -80,6 +83,13 @@ const SNS: { key: string; label: string; path: string }[] = [
                   </h2>
                   {m.role && <p class="role">{m.role}</p>}
 
+                  {m.bio && (
+                    <details class="bio">
+                      <summary class="btn-mini bio-toggle">自己紹介</summary>
+                      <div class="bio-body" set:html={m.bio} />
+                    </details>
+                  )}
+
                   {m.arts.length > 0 && (
                     <>
                       <h3 class="arts-title">主な占術・専門</h3>
@@ -93,7 +103,7 @@ const SNS: { key: string; label: string; path: string }[] = [
 
                   <div class="member-links">
                     {m.id && (
-                      <a class="blog-link" href={blogUrl(m.id)}>ブログを見る →</a>
+                      <a class="btn-mini" href={blogUrl(m.id)}>ブログを見る</a>
                     )}
                     {SNS.some((s) => (m.sns as any)[s.key]) && (
                       <div class="sns-row">
@@ -217,12 +227,52 @@ const SNS: { key: string; label: string; path: string }[] = [
     flex-wrap: wrap;
     gap: 0.9rem 1.2rem;
   }
-  .blog-link {
-    font-weight: 700;
-    font-size: 0.9rem;
+  /* ボタン（自己紹介・ブログ） */
+  .btn-mini {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    padding: 0.42rem 1rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-primary);
+    background: var(--color-surface);
     color: var(--color-primary-soft);
+    font-weight: 700;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    list-style: none;
+    transition: background 0.15s ease, color 0.15s ease;
   }
-  .blog-link:hover { color: var(--color-primary); }
+  .btn-mini:hover {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  /* 自己紹介トグル */
+  .bio {
+    margin: 0.9rem 0 0.2rem;
+  }
+  .bio-toggle::-webkit-details-marker { display: none; }
+  .bio-toggle::marker { content: ''; }
+  .bio-toggle::after {
+    content: '▾';
+    font-size: 0.7em;
+    transition: transform 0.2s ease;
+  }
+  .bio[open] .bio-toggle::after { transform: rotate(180deg); }
+  .bio-body {
+    margin-top: 0.8rem;
+    padding: 0.9rem 1.1rem;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    color: var(--color-text-muted);
+    font-size: 0.93rem;
+    line-height: 1.9;
+  }
+  .bio-body :global(p) { margin: 0 0 0.7rem; }
+  .bio-body :global(p:last-child) { margin-bottom: 0; }
+  .bio-body :global(a) { color: var(--color-primary-soft); text-decoration: underline; }
   .sns-row { display: flex; gap: 0.5rem; }
   .sns {
     width: 34px;
