@@ -49,6 +49,7 @@ export interface Author {
     x: string;
     tiktok: string;
     youtube: string;
+    hp: string;
   };
 }
 export interface PostMeta {
@@ -107,6 +108,7 @@ export function getAuthors(): Promise<Author[]> {
             x: p['X']?.url ?? '',
             tiktok: p['TikTok']?.url ?? '',
             youtube: p['YouTube']?.url ?? '',
+            hp: p['HP']?.url ?? '',
           },
         } as Author;
       });
