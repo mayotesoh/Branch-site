@@ -47,11 +47,16 @@ export interface Author {
     instagram: string;
     facebook: string;
     x: string;
+    threads: string;
     tiktok: string;
     youtube: string;
     hp: string;
   };
 }
+
+// URL に http(s) が無い場合は https:// を補う
+const withProto = (u?: string) =>
+  u ? (/^https?:\/\//i.test(u) ? u : 'https://' + u.replace(/^\/+/, '')) : '';
 export interface PostMeta {
   slug: string;
   title: string;
@@ -103,12 +108,13 @@ export function getAuthors(): Promise<Author[]> {
           image: pFile(p['顔写真']),
           arts: pMulti(p['占術']),
           sns: {
-            instagram: p['Instagram']?.url ?? '',
-            facebook: p['Facebook']?.url ?? '',
-            x: p['X']?.url ?? '',
-            tiktok: p['TikTok']?.url ?? '',
-            youtube: p['YouTube']?.url ?? '',
-            hp: p['HP']?.url ?? '',
+            instagram: withProto(p['Instagram']?.url),
+            facebook: withProto(p['Facebook']?.url),
+            x: withProto(p['X']?.url),
+            threads: withProto(p['Threads']?.url),
+            tiktok: withProto(p['TikTok']?.url),
+            youtube: withProto(p['YouTube']?.url),
+            hp: withProto(p['HP']?.url),
           },
         } as Author;
       });
