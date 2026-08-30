@@ -45,16 +45,25 @@ const steps = [
 <Layout>
   <!-- Hero -->
   <section class="hero">
-    <div class="container hero-inner">
+    <div class="hero-visual">
+      <img
+        class="hero-sky"
+        src={`${base.replace(/\/$/, '')}/hero3.webp`}
+        width="1920"
+        height="1080"
+        alt=""
+        fetchpriority="high"
+      />
       <h1 class="hero-wordmark">
         <img
           src={`${base.replace(/\/$/, '')}/wordmark2.webp`}
           width="1748"
           height="204"
           alt="Fortune Labo ─ 占い師のための教育コミュニティ"
-          fetchpriority="high"
         />
       </h1>
+    </div>
+    <div class="container hero-inner">
       <p class="hero-title">
         稼げる占い師を、<wbr />育成する場所。
       </p>
@@ -191,26 +200,31 @@ const steps = [
 <style>
   /* ロゴの夜空に合わせたネイビーのヒーロー */
   .hero {
-    padding-block: 6.5rem;
+    padding-block: 0 5rem;
     text-align: center;
     color: #fff;
-    position: relative;
-    overflow: hidden;
-    /* 夜空を全面背景に。暗いオーバーレイで前面の文字を可読に */
-    background:
-      linear-gradient(180deg, rgba(9, 16, 38, 0.28) 0%, rgba(9, 16, 38, 0.26) 45%, rgba(9, 16, 38, 0.6) 100%),
-      url('/hero3.webp') center / cover no-repeat;
-    background-color: #0e1836;
+    background: #0e1836;
     border-bottom: 1px solid rgba(255, 255, 255, 0.06);
   }
-  .hero-inner {
+  /* 夜空を全幅で“切れずに”表示（背景のように）＋中央にロゴを重ねる */
+  .hero-visual {
     position: relative;
-    z-index: 1;
+    width: 100%;
+    max-width: 1400px;
+    margin: 0 auto;
   }
-  /* ロゴ（白文字・透過）を中央に */
+  .hero-sky {
+    display: block;
+    width: 100%;
+    height: auto; /* アスペクト維持＝上下が切れない */
+  }
   .hero-wordmark {
-    margin: 0 auto 1.6rem;
-    max-width: min(580px, 86vw);
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: min(52%, 600px);
+    margin: 0;
     line-height: 0;
   }
   .hero-wordmark img {
@@ -218,6 +232,9 @@ const steps = [
     width: 100%;
     height: auto;
     filter: drop-shadow(0 4px 18px rgba(0, 0, 0, 0.6));
+  }
+  .hero-inner {
+    padding-top: 2.6rem;
   }
   .hero-title {
     font-size: clamp(1.5rem, 4.6vw, 2.3rem);
