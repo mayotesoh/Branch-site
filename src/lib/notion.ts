@@ -1,6 +1,26 @@
 import { Client } from '@notionhq/client';
 import { NotionToMarkdown } from 'notion-to-md';
 import { marked } from 'marked';
+import imageMap from '../data/notion-images.json';
+
+/**
+ * Notionにアップされた画像のURL（S3署名付き）は約1時間で期限切れになるため、
+ * ビルド前に取り込んだローカル画像（/notion/xxx.jpg）へ差し替えます。
+ * 対応表は tools/fetch-notion-images.mjs が生成します。
+ */
+export function localizeImage(url: string): string {
+  if (!url) return url;
+  const key = url.split('?')[0];
+  return (imageMap as Record<string, string>)[key] ?? url;
+}
+
+// 本文HTML内に埋め込まれたNotionのS3 URLをローカル画像へ差し替える
+const NOTION_URL_RE =
+  /https?:\/\/[^\s"')]*(?:prod-files-secure|secure\.notion-static\.com|s3\.[^\s"')]*amazonaws\.com)[^\s"')]*/g;
+export function localizeHtml(html: string): string {
+  if (!html) return html;
+  return html.replace(NOTION_URL_RE, (m) => localizeImage(m));
+}
 
 // DB ID は機密ではないためコードに保持。トークンだけ環境変数（.env / CI Secret）。
 export const BLOG_DB = '04e8f32855ae4e80865ab3f2b92798cb';
@@ -105,7 +125,7 @@ export function getAuthors(): Promise<Author[]> {
           name: pText(p['名前']),
           kana: pText(p['よみ']),
           role: pText(p['肩書き']),
-          image: pFile(p['顔写真']),
+          image: localizeImage(pFile(p['顔写真'])),
           arts: pMulti(p['占術']),
           sns: {
             instagram: withProto(p['Instagram']?.url),
@@ -145,7 +165,7 @@ export function getPosts(): Promise<PostMeta[]> {
           authorImage: author?.image ?? '',
           publishDate: new Date(pDate(p['公開日']) || r.created_time),
           excerpt: pText(p['抜粋']),
-          cover: pFile(p['カバー画像']),
+          cover: localizeImage(pFile(p['カバー画像'])),
           tags: pMulti(p['タグ']),
           _pageId: r.id,
         } as PostMeta & { _pageId: string };
@@ -256,7 +276,7 @@ export async function getPostHtml(slug: string): Promise<string> {
   if (!post) return '';
   const mdblocks = await n2m.pageToMarkdown(post._pageId);
   const md = n2m.toMarkdownString(mdblocks).parent ?? '';
-  return await marked.parse(md);
+  return localizeHtml(await marked.parse(md));
 }
 
 /** スタッフ（講師DBページ）の本文＝自己紹介をHTMLで返す（空なら ''） */
@@ -265,7 +285,7 @@ export async function getAuthorBioHtml(pageId: string): Promise<string> {
     const mdblocks = await n2m.pageToMarkdown(pageId);
     const md = (n2m.toMarkdownString(mdblocks).parent ?? '').trim();
     if (!md) return '';
-    return (await marked.parse(md)).trim();
+    return localizeHtml((await marked.parse(md)).trim());
   } catch {
     return '';
   }
@@ -305,7 +325,7 @@ export function getVoices(): Promise<Voice[]> {
         return {
           name: pText(p['表示名']),
           role: pText(p['肩書き']),
-          image: pFile(p['顔写真']),
+          image: localizeImage(pFile(p['顔写真'])),
           result: pText(p['実績']),
           comment: pText(p['感想']),
           courses: pRelIds(p['受講講座'])

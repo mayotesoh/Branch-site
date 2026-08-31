@@ -36,3 +36,6 @@ HANDOFF.md
 private/
 *.xlsx
 scratch_*.mjs
+
+# Notion画像のビルド時取り込み（生成物なのでコミットしない）
+public/notion/
