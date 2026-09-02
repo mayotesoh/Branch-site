@@ -85,6 +85,13 @@ for (const c of sessionCourses) {
   });
 }
 
+// 絞り込みタグ（養成講座＋セッションの各カテゴリ）
+const filterGroups = [
+  ...(certCourses.length > 0
+    ? [{ key: '養成講座', label: '養成講座', icon: '🎓' }]
+    : []),
+  ...categories.map((c) => ({ key: c.name, label: c.name, icon: c.icon })),
+];
 ---
 
 <Layout
@@ -99,8 +106,29 @@ for (const c of sessionCourses) {
         あなたのステージに合わせた講座とセッションを用意しています。
       </p>
 
+      <!-- タグで絞り込み -->
+      {
+        filterGroups.length > 1 && (
+          <div class="course-filter" id="courseFilter">
+            <button class="chip is-active" data-filter="all" type="button">
+              すべて
+            </button>
+            {filterGroups.map((g) => (
+              <button class="chip" data-filter={g.key} type="button">
+                <span class="chip-ico">{g.icon}</span>
+                {g.label}
+              </button>
+            ))}
+          </div>
+        )
+      }
+
+      <p class="filter-empty" id="filterEmpty" hidden>
+        該当する講座がありません。
+      </p>
+
       <!-- 養成講座 -->
-      <div class="cat">
+      <div class="cat" data-group="養成講座">
         <div class="cat-head">
           <span class="cat-icon">🎓</span>
           <div>
@@ -143,7 +171,7 @@ for (const c of sessionCourses) {
       <!-- セッション・講座（テーマ別） -->
       {
         categories.map((cat) => (
-          <div class="cat">
+          <div class="cat" data-group={cat.name}>
             <div class="cat-head">
               <span class="cat-icon">{cat.icon}</span>
               <div>
@@ -179,9 +207,73 @@ for (const c of sessionCourses) {
       </div>
     </div>
   </section>
+
+  <script>
+    const bar = document.getElementById('courseFilter');
+    if (bar) {
+      const chips = Array.from(bar.querySelectorAll('.chip'));
+      const groups = Array.from(document.querySelectorAll('.cat[data-group]'));
+      const emptyMsg = document.getElementById('filterEmpty');
+      bar.addEventListener('click', (e) => {
+        const chip = (e.target as HTMLElement).closest('.chip') as HTMLElement | null;
+        if (!chip) return;
+        const filter = chip.dataset.filter;
+        chips.forEach((c) => c.classList.toggle('is-active', c === chip));
+        let shown = 0;
+        groups.forEach((g) => {
+          const match = filter === 'all' || (g as HTMLElement).dataset.group === filter;
+          (g as HTMLElement).hidden = !match;
+          if (match) shown++;
+        });
+        if (emptyMsg) emptyMsg.hidden = shown > 0;
+      });
+    }
+  </script>
 </Layout>
 
 <style>
+  /* タグ絞り込み */
+  .course-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    justify-content: center;
+    margin: 0 auto 3rem;
+    max-width: 900px;
+  }
+  .chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    border-radius: 999px;
+    padding: 0.45rem 1.05rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .chip:hover {
+    border-color: var(--color-primary);
+    color: var(--color-primary-soft);
+  }
+  .chip.is-active {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
+  }
+  .chip-ico {
+    font-size: 0.95em;
+  }
+  .filter-empty {
+    text-align: center;
+    color: var(--color-text-muted);
+    margin: 2rem 0 3rem;
+  }
+
   .cat {
     margin-bottom: 3.5rem;
   }
