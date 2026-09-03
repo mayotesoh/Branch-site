@@ -1,6 +1,21 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { GAS_URL } from '../consts';
+import { getEvents } from '../lib/notion';
+
+// これから（今日以降）のイベントを予約・出席用に埋め込む
+const _t = new Date();
+_t.setHours(0, 0, 0, 0);
+const memberEvents = (await getEvents())
+  .filter((e) => e.date && new Date(e.date).getTime() >= _t.getTime())
+  .map((e) => ({
+    id: e.pageId,
+    name: e.name,
+    type: e.type,
+    date: e.date,
+    end: e.end,
+    accepting: e.accepting,
+  }));
 ---
 
 <Layout
@@ -43,7 +58,7 @@ import { GAS_URL } from '../consts';
   </section>
 </Layout>
 
-<script define:vars={{ GAS_URL }} is:inline>
+<script define:vars={{ GAS_URL, memberEvents }} is:inline>
   const loginBox = document.getElementById('login');
   const dash = document.getElementById('dash');
   const form = document.getElementById('login-form');
@@ -140,6 +155,50 @@ import { GAS_URL } from '../consts';
       + `${inner}</div>`;
   }
 
+  // ── イベント予約・出席確認 ──
+  let creds = null; // {no, pin} 予約/出席確認に使う
+  const WD = ['日', '月', '火', '水', '木', '金', '土'];
+  function evFmt(iso) {
+    const d = new Date(iso);
+    if (isNaN(d)) return '';
+    const t = iso.includes('T')
+      ? ` ${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      : '';
+    return `${d.getMonth() + 1}月${d.getDate()}日（${WD[d.getDay()]}）${t}`;
+  }
+  function eventsBlock(stamps) {
+    if (!Array.isArray(memberEvents) || !memberEvents.length) return '';
+    const stateByEvent = {};
+    (stamps || []).forEach((s) => { if (s.eventId) stateByEvent[s.eventId] = s.status; });
+    const rows = memberEvents.map((e) => {
+      const st = stateByEvent[e.id];
+      const ic = STAMP_ICON[e.type] || '✦';
+      const tags = `<span class="mev-type">${ic} ${esc(e.type || 'イベント')}</span>`
+        + (e.accepting ? '<span class="mev-open">受付中</span>' : '');
+      let actions;
+      if (st === '出席') {
+        actions = '<span class="mev-done">✓ 出席済み</span>';
+      } else {
+        const reserve = st === '申込'
+          ? '<span class="mev-reserved">✓ 予約済み</span>'
+          : `<button class="btn btn-primary btn-sm mev-reserve" data-id="${esc(e.id)}">予約する</button>`;
+        actions = `${reserve}`
+          + `<div class="mev-checkin">`
+          + `<input class="mev-code" type="text" data-id="${esc(e.id)}" placeholder="当日の合言葉" autocomplete="off" />`
+          + `<button class="btn btn-ghost btn-sm mev-attend" data-id="${esc(e.id)}">出席</button>`
+          + `</div>`;
+      }
+      return `<div class="mev"><div class="mev-head">${tags}</div>`
+        + `<p class="mev-name">${esc(e.name)}</p>`
+        + `<p class="mev-date">${esc(evFmt(e.date))}</p>`
+        + `<div class="mev-actions">${actions}</div>`
+        + `<p class="mev-msg" data-id="${esc(e.id)}" aria-live="polite"></p></div>`;
+    }).join('');
+    return `<div class="block"><h2 class="block-h">イベント予約・出席</h2>`
+      + `<p class="mev-lead">参加したいイベントを予約できます。当日は運営が発表する合言葉を入力すると出席になります。</p>`
+      + `<div class="mev-list">${rows}</div></div>`;
+  }
+
   function renderDash(d) {
     loginBox.hidden = true;
     dash.hidden = false;
@@ -155,6 +214,8 @@ import { GAS_URL } from '../consts';
         </div>
         <button id="logout" class="btn btn-ghost btn-sm">ログアウト</button>
       </div>
+
+      ${eventsBlock(d.stamps)}
 
       <div class="block">
         <h2 class="block-h">対応占術</h2>
@@ -175,7 +236,8 @@ import { GAS_URL } from '../consts';
       </div>
     `;
     document.getElementById('logout').addEventListener('click', () => {
-      try { sessionStorage.removeItem('fl_member'); } catch (e) {}
+      creds = null;
+      try { sessionStorage.removeItem('fl_member_v2'); sessionStorage.removeItem('fl_cred'); } catch (e) {}
       dash.hidden = true;
       loginBox.hidden = false;
       form.reset();
@@ -183,6 +245,59 @@ import { GAS_URL } from '../consts';
     });
     dash.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+
+  // GAS 共通POST
+  async function postGas(payload) {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  }
+  // 予約/出席の後にダッシュボードを最新化
+  async function refreshDash() {
+    if (!creds) return;
+    try {
+      const data = await postGas({ action: 'member_login', memberNo: creds.no, pin: creds.pin });
+      if (data.status === 'ok') {
+        try { sessionStorage.setItem('fl_member_v2', JSON.stringify(data)); } catch (e) {}
+        renderDash(data);
+      }
+    } catch (e) {}
+  }
+
+  // 予約・出席ボタン（ダッシュボードは再描画されるためデリゲートで一度だけ登録）
+  dash.addEventListener('click', async (e) => {
+    const rBtn = e.target.closest('.mev-reserve');
+    const aBtn = e.target.closest('.mev-attend');
+    if (!rBtn && !aBtn) return;
+    const id = (rBtn || aBtn).dataset.id;
+    const msgEl = dash.querySelector(`.mev-msg[data-id="${id}"]`);
+    const setMsg = (t, ok) => { if (msgEl) { msgEl.textContent = t; msgEl.className = 'mev-msg ' + (ok ? 'ok' : 'error'); } };
+    if (!creds) { setMsg('再ログインしてください。', false); return; }
+
+    if (rBtn) {
+      rBtn.disabled = true; rBtn.textContent = '送信中…';
+      try {
+        const r = await postGas({ action: 'event_reserve', memberNo: creds.no, pin: creds.pin, eventId: id });
+        if (r.status === 'ok') { setMsg(r.already ? 'すでに予約済みです。' : '予約しました！', true); await refreshDash(); }
+        else { setMsg(r.message || '予約できませんでした。', false); rBtn.disabled = false; rBtn.textContent = '予約する'; }
+      } catch (err) { setMsg('通信に失敗しました。', false); rBtn.disabled = false; rBtn.textContent = '予約する'; }
+      return;
+    }
+
+    // 出席（合言葉）
+    const codeEl = dash.querySelector(`.mev-code[data-id="${id}"]`);
+    const code = codeEl ? codeEl.value.trim() : '';
+    if (!code) { setMsg('当日の合言葉を入力してください。', false); return; }
+    aBtn.disabled = true; aBtn.textContent = '確認中…';
+    try {
+      const r = await postGas({ action: 'event_checkin', memberNo: creds.no, pin: creds.pin, eventId: id, code });
+      if (r.status === 'ok') { setMsg('出席を確認しました！', true); await refreshDash(); }
+      else { setMsg(r.message || '出席確認できませんでした。', false); aBtn.disabled = false; aBtn.textContent = '出席'; }
+    } catch (err) { setMsg('通信に失敗しました。', false); aBtn.disabled = false; aBtn.textContent = '出席'; }
+  });
 
   async function login(memberNo, pin) {
     btn.disabled = true;
@@ -197,7 +312,11 @@ import { GAS_URL } from '../consts';
       });
       const data = await res.json();
       if (data.status === 'ok') {
-        try { sessionStorage.setItem('fl_member', JSON.stringify(data)); } catch (e) {}
+        creds = { no: memberNo, pin };
+        try {
+          sessionStorage.setItem('fl_member_v2', JSON.stringify(data));
+          sessionStorage.setItem('fl_cred', JSON.stringify(creds));
+        } catch (e) {}
         renderDash(data);
       } else {
         msg.textContent = data.message || 'ログインできませんでした。';
@@ -226,7 +345,9 @@ import { GAS_URL } from '../consts';
 
   // セッション中は再ログイン不要
   try {
-    const saved = sessionStorage.getItem('fl_member');
+    const savedCred = sessionStorage.getItem('fl_cred');
+    if (savedCred) creds = JSON.parse(savedCred);
+    const saved = sessionStorage.getItem('fl_member_v2');
     if (saved) renderDash(JSON.parse(saved));
   } catch (e) {}
 </script>
@@ -304,6 +425,44 @@ import { GAS_URL } from '../consts';
   #dash .stamp.is-on .stamp-ic { filter: none; box-shadow: 0 3px 10px rgba(46, 74, 138, 0.18); }
   #dash .stamp-name { font-size: 0.82rem; font-weight: 700; line-height: 1.4; }
   #dash .stamp-meta { font-size: 0.72rem; color: var(--color-text-muted); }
+
+  /* イベント予約・出席 */
+  #dash .mev-lead { color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 0.9rem; line-height: 1.7; }
+  #dash .mev-list { display: grid; gap: 0.8rem; }
+  #dash .mev {
+    border: 1px solid var(--color-border);
+    border-left: 3px solid var(--color-primary);
+    border-radius: 12px;
+    padding: 0.9rem 1rem;
+    background: var(--color-surface);
+  }
+  #dash .mev-head { display: flex; flex-wrap: wrap; gap: 0.4rem; margin-bottom: 0.35rem; }
+  #dash .mev-type {
+    background: var(--color-bg-soft); border: 1px solid var(--color-border);
+    border-radius: 999px; padding: 0.15rem 0.6rem; font-size: 0.74rem; color: var(--color-text-muted);
+  }
+  #dash .mev-open {
+    background: #06c755; color: #fff; border-radius: 999px;
+    padding: 0.15rem 0.6rem; font-size: 0.74rem; font-weight: 700;
+  }
+  #dash .mev-name { font-weight: 700; line-height: 1.5; }
+  #dash .mev-date { color: var(--color-text-muted); font-size: 0.82rem; margin-top: 0.15rem; }
+  #dash .mev-actions {
+    display: flex; flex-wrap: wrap; align-items: center; gap: 0.5rem 0.7rem; margin-top: 0.7rem;
+  }
+  #dash .mev-checkin { display: flex; gap: 0.4rem; align-items: center; }
+  #dash .mev-code {
+    width: 9em; padding: 0.4rem 0.6rem; font-size: 0.85rem;
+    border: 1px solid var(--color-border); border-radius: 8px;
+    background: var(--color-bg); color: var(--color-text);
+  }
+  #dash .mev-code:focus { outline: none; border-color: var(--color-primary); }
+  #dash .mev-done { color: #06a047; font-weight: 700; font-size: 0.9rem; }
+  #dash .mev-reserved { color: var(--color-primary-soft); font-weight: 700; font-size: 0.9rem; }
+  #dash .mev-msg { font-size: 0.82rem; margin-top: 0.4rem; min-height: 1em; }
+  #dash .mev-msg.ok { color: #06a047; }
+  #dash .mev-msg.error { color: #d33; }
+  #dash .mev-msg:empty { margin-top: 0; }
   #dash .course-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--color-text-muted); font-size: 0.92rem; }
 
   /* 鑑定ロープレ評価（パラメータ） */

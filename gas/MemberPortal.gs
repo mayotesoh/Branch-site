@@ -32,6 +32,7 @@ function mpStamps_(memberPageId) {
         try { evName = cpText_(cpApi_('pages/' + evRel[0].id).properties['イベント名']); } catch (e) {}
       }
       return {
+        eventId: evRel.length ? evRel[0].id : '',
         event: evName || cpText_(p['記録']),
         type: (p['種別'] && p['種別'].select) ? p['種別'].select.name : '',
         date: (p['開催日'] && p['開催日'].date) ? p['開催日'].date.start : '',
@@ -83,18 +84,18 @@ function mpRollupNumber_(prop) {
 }
 
 /**
- * 会員ログイン（member_login）
- * @param {{memberNo:string, pin:string}} data
+ * 会員番号＋暗証番号で会員を照合して会員ページを返す（不一致は例外）。
+ * ログイン／予約／出席確認で共通利用。
  */
-function handleMemberLogin(data) {
-  const no = String(data.memberNo || '').trim();
-  const pin = String(data.pin || '').trim();
-  if (!no || !pin) throw new Error('会員番号と暗証番号を入力してください。');
+function mpFindMember_(no, pin) {
+  const n = String(no || '').trim();
+  const p = String(pin || '').trim();
+  if (!n || !p) throw new Error('会員番号と暗証番号を入力してください。');
 
   const members = cpQuery_(CP_MEMBER_DB);
   let hit = null;
   for (let i = 0; i < members.length; i++) {
-    if (cpNorm_(cpText_(members[i].properties['会員番号'])) === cpNorm_(no)) { hit = members[i]; break; }
+    if (cpNorm_(cpText_(members[i].properties['会員番号'])) === cpNorm_(n)) { hit = members[i]; break; }
   }
   // 会員番号・暗証番号のどちらが違うかは明かさない（総当たり対策）
   const ngMsg = '会員番号または暗証番号が正しくありません。';
@@ -102,8 +103,103 @@ function handleMemberLogin(data) {
 
   const savedPin = cpText_(hit.properties['暗証番号']).trim();
   if (!savedPin) throw new Error('この会員には暗証番号が未設定です。運営にお問い合わせください。');
-  if (savedPin !== pin) throw new Error(ngMsg);
+  if (savedPin !== p) throw new Error(ngMsg);
+  return hit;
+}
 
+/** 同一会員×同一イベントの参加記録を1件返す（無ければ null） */
+function mpFindPart_(memberId, eventId) {
+  const b = cpApi_('databases/' + MP_PART_DB + '/query', 'post', {
+    page_size: 1,
+    filter: {
+      and: [
+        { property: '会員', relation: { contains: memberId } },
+        { property: 'イベント', relation: { contains: eventId } },
+      ],
+    },
+  });
+  return (b.results && b.results.length) ? b.results[0] : null;
+}
+
+/** イベントページから基本情報を取り出す */
+function mpEventInfo_(eventId) {
+  const ev = cpApi_('pages/' + eventId);
+  const ep = ev.properties;
+  return {
+    page: ev,
+    name: cpText_(ep['イベント名']),
+    type: (ep['種別'] && ep['種別'].select) ? ep['種別'].select.name : '',
+    date: (ep['開催日'] && ep['開催日'].date) ? ep['開催日'].date.start : '',
+    secret: cpText_(ep['合言葉']).trim(),
+  };
+}
+
+/** 参加記録を1件作成する（状態＝申込 or 出席） */
+function mpCreatePart_(memberId, ev, status) {
+  const props = {
+    '記録': { title: [{ text: { content: ev.name || 'イベント' } }] },
+    '会員': { relation: [{ id: memberId }] },
+    'イベント': { relation: [{ id: ev.pageId }] },
+    '状態': { select: { name: status } },
+    '取込元': { select: { name: '会員ページ' } },
+  };
+  if (ev.type) props['種別'] = { select: { name: ev.type } };
+  if (ev.date) props['開催日'] = { date: { start: ev.date } };
+  cpApi_('pages', 'post', { parent: { database_id: MP_PART_DB }, properties: props });
+}
+
+/**
+ * イベント予約（event_reserve）：参加記録に「申込」を作成
+ * @param {{memberNo:string, pin:string, eventId:string}} data
+ */
+function handleEventReserve(data) {
+  const eventId = String(data.eventId || '').trim();
+  if (!eventId) throw new Error('イベントが指定されていません。');
+  const hit = mpFindMember_(data.memberNo, data.pin);
+  const info = mpEventInfo_(eventId);
+  info.pageId = eventId;
+
+  const existing = mpFindPart_(hit.id, eventId);
+  if (existing) {
+    const st = (existing.properties['状態'] && existing.properties['状態'].select)
+      ? existing.properties['状態'].select.name : '';
+    return jsonOutput({ status: 'ok', reserved: true, already: true, state: st, event: info.name });
+  }
+  mpCreatePart_(hit.id, info, '申込');
+  return jsonOutput({ status: 'ok', reserved: true, state: '申込', event: info.name });
+}
+
+/**
+ * 出席確認（event_checkin）：合言葉を照合し参加記録を「出席」に
+ * @param {{memberNo:string, pin:string, eventId:string, code:string}} data
+ */
+function handleEventCheckin(data) {
+  const eventId = String(data.eventId || '').trim();
+  const code = String(data.code || '').trim();
+  if (!eventId) throw new Error('イベントが指定されていません。');
+  if (!code) throw new Error('合言葉を入力してください。');
+  const hit = mpFindMember_(data.memberNo, data.pin);
+  const info = mpEventInfo_(eventId);
+  info.pageId = eventId;
+  if (!info.secret) throw new Error('このイベントはまだ合言葉が設定されていません。');
+  if (cpNorm_(info.secret) !== cpNorm_(code)) throw new Error('合言葉が正しくありません。');
+
+  const existing = mpFindPart_(hit.id, eventId);
+  if (existing) {
+    cpApi_('pages/' + existing.id, 'patch', { properties: { '状態': { select: { name: '出席' } } } });
+  } else {
+    mpCreatePart_(hit.id, info, '出席');
+  }
+  return jsonOutput({ status: 'ok', attended: true, event: info.name });
+}
+
+/**
+ * 会員ログイン（member_login）
+ * @param {{memberNo:string, pin:string}} data
+ */
+function handleMemberLogin(data) {
+  const no = String(data.memberNo || '').trim();
+  const hit = mpFindMember_(no, data.pin);
   const p = hit.properties;
   const multi = function (key) {
     return (p[key] && p[key].multi_select ? p[key].multi_select : []).map(function (o) { return o.name; });

@@ -64,6 +64,15 @@ function doPost(e) {
       return handleMemberLogin(data); // MemberPortal.gs
     }
 
+    // (G) 会員ページ イベント予約（参加記録に「申込」を作成）
+    if (data && data.action === 'event_reserve') {
+      return handleEventReserve(data); // MemberPortal.gs
+    }
+    // (H) 会員ページ 出席確認（合言葉照合→参加記録を「出席」に）
+    if (data && data.action === 'event_checkin') {
+      return handleEventCheckin(data); // MemberPortal.gs
+    }
+
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);
   } catch (err) {
