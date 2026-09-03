@@ -1,6 +1,6 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { GAS_URL } from '../consts';
+import { GAS_URL, LINE_URL } from '../consts';
 import { getEvents } from '../lib/notion';
 
 // これから（今日以降）のイベントを予約・出席用に埋め込む
@@ -46,10 +46,27 @@ const memberEvents = (await getEvents())
           <button id="login-btn" type="submit" class="btn btn-primary btn-block">ログイン</button>
           <p id="login-msg" class="login-msg" role="alert" aria-live="polite"></p>
         </form>
-        <p class="login-note">
-          暗証番号がわからない場合や、うまくログインできない場合は
-          公式LINEからお問い合わせください。
-        </p>
+        <details class="login-help">
+          <summary>会員番号・パスワードがわからない方はこちら</summary>
+          <div class="login-help-body">
+            <p>公式LINEのトークから、その場で確認・変更できます。</p>
+            <ol class="login-help-steps">
+              <li>下のボタンから<strong>公式LINEを友だち追加</strong></li>
+              <li>トークで <strong>「ID確認」</strong> と送信</li>
+              <li>案内にそって <strong>お名前（フルネーム）</strong> を送信<br />
+                <span class="login-help-note">「山田太郎」でも「山田 太郎」でもOK</span></li>
+              <li>あなたの<strong>会員番号とパスワード</strong>が届きます</li>
+              <li>そのまま <strong>「ID変更」「パスワード変更」</strong> で好きな値に変更も可能</li>
+            </ol>
+            <a class="btn btn-line login-help-line" href={LINE_URL} target="_blank" rel="noopener noreferrer">
+              <svg viewBox="0 0 24 24" aria-hidden="true">
+                <path d="M12 3C6.48 3 2 6.6 2 11.02c0 2.55 1.5 4.8 3.86 6.25-.17.6-.62 2.2-.71 2.54-.11.42.16.41.33.3.14-.09 2.16-1.43 3.04-2.02.78.11 1.59.17 2.48.17 5.52 0 10-3.6 10-8.04C22 6.6 17.52 3 12 3z"></path>
+              </svg>
+              公式LINEを開く
+            </a>
+            <p class="login-help-note">うまくいかない場合は、そのままLINEで運営にお問い合わせください。</p>
+          </div>
+        </details>
       </div>
 
       <!-- ダッシュボード -->
@@ -196,7 +213,10 @@ const memberEvents = (await getEvents())
         + `<p class="mev-msg" data-id="${esc(e.id)}" aria-live="polite"></p></div>`;
     }).join('');
     return `<details class="block mev-block" open>`
-      + `<summary class="block-h mev-summary">イベント予約・出席</summary>`
+      + `<summary class="mev-summary">`
+      + `<span class="mev-summary-t">📅 イベント予約・出席</span>`
+      + `<span class="mev-toggle"><span class="mev-toggle-txt"></span><span class="mev-caret">▾</span></span>`
+      + `</summary>`
       + `<p class="mev-lead">参加したいイベントを予約できます。当日は運営が発表する合言葉を入力すると出席になります。</p>`
       + `<div class="mev-list">${rows}</div></details>`;
   }
@@ -392,6 +412,33 @@ const memberEvents = (await getEvents())
     margin-top: 1.3rem; padding-top: 1.1rem; border-top: 1px solid var(--color-border);
     color: var(--color-text-muted); font-size: 0.85rem; text-align: center; line-height: 1.7;
   }
+  .login-help {
+    margin-top: 1.3rem; padding-top: 1.1rem; border-top: 1px solid var(--color-border);
+  }
+  .login-help > summary {
+    cursor: pointer; list-style: none;
+    display: flex; align-items: center; gap: 0.4rem;
+    font-weight: 700; font-size: 0.9rem; color: var(--color-primary-soft);
+    text-align: center; justify-content: center;
+  }
+  .login-help > summary::-webkit-details-marker { display: none; }
+  .login-help > summary::before { content: '❓'; }
+  .login-help > summary::after {
+    content: '▾'; font-size: 0.8em; color: var(--color-text-muted);
+    transition: transform 0.2s ease;
+  }
+  .login-help[open] > summary::after { transform: rotate(180deg); }
+  .login-help-body {
+    margin-top: 1rem; padding: 1.1rem 1.2rem;
+    background: var(--color-bg-soft); border: 1px solid var(--color-border);
+    border-radius: 12px; color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.8;
+  }
+  .login-help-steps {
+    margin: 0.8rem 0; padding-left: 1.3rem; display: grid; gap: 0.5rem;
+  }
+  .login-help-steps strong { color: var(--color-text); }
+  .login-help-note { font-size: 0.82rem; color: var(--color-text-muted); }
+  .login-help-line { width: 100%; margin: 0.9rem 0 0.6rem; }
 
 </style>
 
@@ -440,18 +487,34 @@ const memberEvents = (await getEvents())
   #dash .stamp-name { font-size: 0.82rem; font-weight: 700; line-height: 1.4; }
   #dash .stamp-meta { font-size: 0.72rem; color: var(--color-text-muted); }
 
-  /* イベント予約・出席 */
+  /* イベント予約・出席（開閉バー） */
+  #dash .mev-block { margin-bottom: 1.5rem; }
   #dash .mev-summary {
-    display: flex; align-items: center; gap: 0.4rem;
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
     cursor: pointer; list-style: none; user-select: none;
+    padding: 0.85rem 1.1rem;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+    transition: border-color 0.15s ease, background 0.15s ease;
   }
+  #dash .mev-summary:hover { border-color: var(--color-primary); }
   #dash .mev-summary::-webkit-details-marker { display: none; }
-  #dash .mev-summary::after {
-    content: '▾'; margin-left: auto; font-size: 0.85em;
-    color: var(--color-text-muted); transition: transform 0.2s ease;
+  #dash .mev-summary-t { font-weight: 800; color: var(--color-primary-soft); font-size: 1.02rem; }
+  #dash .mev-toggle {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.25rem 0.7rem; border-radius: 999px;
+    background: var(--color-primary); color: #fff;
+    font-size: 0.8rem; font-weight: 700; white-space: nowrap;
   }
-  #dash .mev-block:not([open]) .mev-summary::after { transform: rotate(-90deg); }
-  #dash .mev-block:not([open]) .mev-summary { margin-bottom: 0; }
+  #dash .mev-toggle-txt::after { content: '閉じる'; }
+  #dash .mev-block:not([open]) .mev-toggle-txt::after { content: '開く'; }
+  #dash .mev-caret { transition: transform 0.2s ease; }
+  #dash .mev-block:not([open]) .mev-caret { transform: rotate(-90deg); }
+  #dash .mev-block[open] .mev-summary {
+    border-bottom-left-radius: 0; border-bottom-right-radius: 0;
+    margin-bottom: 0.9rem;
+  }
   #dash .mev-lead { color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 0.9rem; line-height: 1.7; }
   #dash .mev-list { display: grid; gap: 0.8rem; }
   #dash .mev {
