@@ -1,0 +1,278 @@
+---
+import Layout from '../layouts/Layout.astro';
+import LineButton from '../components/LineButton.astro';
+import { getEvents } from '../lib/notion';
+
+const base = import.meta.env.BASE_URL;
+const joinUrl = `${base.replace(/\/$/, '')}/join`;
+
+const TYPE_ICON: Record<string, string> = {
+  定例会: '🗓️',
+  スキルアップ講座: '📚',
+  リーディング会: '🔮',
+  ロープレ: '🃏',
+  'マルシェ・イベント': '🎪',
+  zoom解放日: '💻',
+};
+
+const WD = ['日', '月', '火', '水', '木', '金', '土'];
+const fmt = (iso: string) => {
+  if (!iso) return { md: '', wd: '', time: '', y: '' };
+  const d = new Date(iso);
+  const hasTime = iso.includes('T');
+  return {
+    y: `${d.getFullYear()}`,
+    md: `${d.getMonth() + 1}月${d.getDate()}日`,
+    wd: WD[d.getDay()],
+    time: hasTime
+      ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+      : '',
+  };
+};
+
+const allEvents = await getEvents();
+// きょうの0時を基準に、これから／これまでで分ける
+const today = new Date();
+today.setHours(0, 0, 0, 0);
+const isFuture = (e: { date: string }) =>
+  e.date && new Date(e.date).getTime() >= today.getTime();
+
+const upcoming = allEvents.filter(isFuture);
+const past = allEvents.filter((e) => !isFuture(e)).reverse(); // 新しい順
+---
+
+<Layout
+  title="イベント｜Fortune Labo"
+  description="Fortune Laboの定例会・スキルアップ講座・リーディング会・ロープレなど、開催予定と過去のイベント一覧です。"
+>
+  <section class="section">
+    <div class="container">
+      <h1 class="section-title">イベント</h1>
+      <p class="section-lead">
+        定例会・スキルアップ講座・リーディング会・ロープレなど、みんなで学び合う場をご案内します。
+      </p>
+
+      <!-- これからのイベント -->
+      <h2 class="ev-heading">これからの開催</h2>
+      {
+        upcoming.length === 0 ? (
+          <p class="ev-empty">
+            現在お知らせできる予定はありません。決まり次第このページと公式LINEでご案内します。
+          </p>
+        ) : (
+          <ul class="ev-list">
+            {upcoming.map((e) => {
+              const d = fmt(e.date);
+              return (
+                <li class="ev-card">
+                  <div class="ev-date">
+                    <span class="ev-md">{d.md}</span>
+                    <span class="ev-wd">（{d.wd}）{d.time}</span>
+                  </div>
+                  <div class="ev-body">
+                    <div class="ev-tags">
+                      {e.type && (
+                        <span class="ev-type">
+                          {TYPE_ICON[e.type] ?? '✦'} {e.type}
+                        </span>
+                      )}
+                      {e.accepting && <span class="ev-open">受付中</span>}
+                    </div>
+                    <p class="ev-name">{e.name}</p>
+                    {e.memo && <p class="ev-memo">{e.memo}</p>}
+                    {e.url && (
+                      <a class="ev-link" href={e.url} target="_blank" rel="noopener noreferrer">
+                        詳細・お申し込み →
+                      </a>
+                    )}
+                  </div>
+                </li>
+              );
+            })}
+          </ul>
+        )
+      }
+
+      <!-- これまでのイベント -->
+      {
+        past.length > 0 && (
+          <>
+            <h2 class="ev-heading ev-heading-past">これまでの開催</h2>
+            <ul class="ev-list ev-list-past">
+              {past.map((e) => {
+                const d = fmt(e.date);
+                return (
+                  <li class="ev-card is-past">
+                    <div class="ev-date">
+                      <span class="ev-md">{d.md}</span>
+                      <span class="ev-wd">
+                        {d.y}・{d.wd}
+                      </span>
+                    </div>
+                    <div class="ev-body">
+                      <div class="ev-tags">
+                        {e.type && (
+                          <span class="ev-type">
+                            {TYPE_ICON[e.type] ?? '✦'} {e.type}
+                          </span>
+                        )}
+                      </div>
+                      <p class="ev-name">{e.name}</p>
+                    </div>
+                  </li>
+                );
+              })}
+            </ul>
+          </>
+        )
+      }
+
+      <div class="ev-cta">
+        <p>参加のご予約・ご相談は公式LINEから。会員の方は参加するとマイページにスタンプがたまります。</p>
+        <div class="ev-cta-actions">
+          <LineButton label="LINEで予約・相談する" />
+          <a class="btn btn-ghost" href={joinUrl}>参加方法を見る</a>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .ev-heading {
+    font-size: 1.3rem;
+    color: var(--color-primary-soft);
+    margin: 2.5rem 0 1.2rem;
+    padding-bottom: 0.6rem;
+    border-bottom: 2px solid var(--color-border);
+  }
+  .ev-heading-past {
+    color: var(--color-text-muted);
+    margin-top: 3.5rem;
+  }
+  .ev-empty {
+    color: var(--color-text-muted);
+    background: var(--color-bg-soft);
+    border: 1px dashed var(--color-border);
+    border-radius: var(--radius);
+    padding: 1.5rem;
+    text-align: center;
+  }
+  .ev-list {
+    list-style: none;
+    display: grid;
+    gap: 1rem;
+    max-width: 820px;
+  }
+  .ev-card {
+    display: grid;
+    grid-template-columns: 128px 1fr;
+    gap: 1.2rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-primary);
+    border-radius: var(--radius);
+    padding: 1.3rem 1.5rem;
+  }
+  .ev-card.is-past {
+    border-left-color: var(--color-border);
+    opacity: 0.85;
+  }
+  .ev-date {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    text-align: center;
+    border-right: 1px solid var(--color-border);
+    padding-right: 1rem;
+  }
+  .ev-md {
+    font-size: 1.15rem;
+    font-weight: 800;
+    color: var(--color-primary-soft);
+  }
+  .is-past .ev-md {
+    color: var(--color-text);
+  }
+  .ev-wd {
+    font-size: 0.8rem;
+    color: var(--color-text-muted);
+    margin-top: 0.2rem;
+  }
+  .ev-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.5rem;
+  }
+  .ev-type {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+  }
+  .ev-open {
+    background: #06c755;
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .ev-name {
+    font-size: 1.1rem;
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .ev-memo {
+    color: var(--color-text-muted);
+    font-size: 0.92rem;
+    margin-top: 0.4rem;
+    line-height: 1.7;
+  }
+  .ev-link {
+    display: inline-block;
+    margin-top: 0.7rem;
+    font-weight: 700;
+    color: var(--color-primary-soft);
+  }
+  .ev-link:hover {
+    color: var(--color-primary);
+  }
+
+  .ev-cta {
+    margin-top: 3.5rem;
+    text-align: center;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 2rem 1.5rem;
+  }
+  .ev-cta p {
+    color: var(--color-text-muted);
+    margin-bottom: 1.3rem;
+    font-size: 0.92rem;
+  }
+  .ev-cta-actions {
+    display: flex;
+    gap: 0.8rem;
+    justify-content: center;
+    flex-wrap: wrap;
+  }
+
+  @media (max-width: 560px) {
+    .ev-card {
+      grid-template-columns: 84px 1fr;
+      gap: 0.9rem;
+      padding: 1.1rem 1.1rem;
+    }
+    .ev-date {
+      padding-right: 0.7rem;
+    }
+    .ev-md {
+      font-size: 1rem;
+    }
+  }
+</style>

@@ -13,6 +13,36 @@
 const MP_EVAL_DB = '3cc76a17-0aae-81aa-a916-f611abe889b2';
 const MP_EVAL_ITEMS = ['声・話し方', '聞く姿勢', '言葉選び', '鑑定の流れ', '鑑定内容', '安心感'];
 
+// 参加記録DB（会員の定例会・セミナー等の参加履歴＝スタンプ）
+const MP_PART_DB = '3a776a17-0aae-8123-89ea-dbd65a7295e7';
+
+/** その会員の参加記録（新しい順）。イベント名は関連ページから取得 */
+function mpStamps_(memberPageId) {
+  try {
+    const body = cpApi_('databases/' + MP_PART_DB + '/query', 'post', {
+      page_size: 100,
+      filter: { property: '会員', relation: { contains: memberPageId } },
+      sorts: [{ property: '開催日', direction: 'descending' }],
+    });
+    return (body.results || []).map(function (r) {
+      const p = r.properties;
+      let evName = '';
+      const evRel = (p['イベント'] && p['イベント'].relation) ? p['イベント'].relation : [];
+      if (evRel.length) {
+        try { evName = cpText_(cpApi_('pages/' + evRel[0].id).properties['イベント名']); } catch (e) {}
+      }
+      return {
+        event: evName || cpText_(p['記録']),
+        type: (p['種別'] && p['種別'].select) ? p['種別'].select.name : '',
+        date: (p['開催日'] && p['開催日'].date) ? p['開催日'].date.start : '',
+        status: (p['状態'] && p['状態'].select) ? p['状態'].select.name : '',
+      };
+    });
+  } catch (e) {
+    return [];
+  }
+}
+
 /** その会員の最新評価を1件返す（無ければ null） */
 function mpLatestEval_(memberNo) {
   try {
@@ -94,11 +124,11 @@ function handleMemberLogin(data) {
     tellerName: cpText_(p['占い師名']),
     memberNo: cpText_(p['会員番号']),
     memberStatus: sel('会員ステータス'),
-    thisTerm: mpRollupNumber_(p['今期得点']),
-    total: mpRollupNumber_(p['通算得点']),
+    arts: multi('占術'),
     titles: multi('称号'),
     certs: multi('認定/テスト'),
     courses: courses,
+    stamps: mpStamps_(hit.id),
     evaluation: mpLatestEval_(cpText_(p['会員番号']) || no),
   });
 }

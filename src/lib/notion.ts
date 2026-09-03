@@ -28,6 +28,7 @@ export const INSTR_DB = '30e989297ce14ea99cbea84a2e5e2180';
 export const COURSE_DB = '9e653e0af59e47ebb3c1c9d443339e48';
 export const INSTA_DB = '3a776a170aae818e8b00ea3294ee042f';
 export const VOICE_DB = '3a776a170aae81e88abbd889d401e589';
+export const EVENT_DB = '3a776a170aae814d8066e4c4161e9961';
 
 const token =
   (import.meta.env as any).NOTION_TOKEN ?? process.env.NOTION_TOKEN;
@@ -337,6 +338,45 @@ export function getVoices(): Promise<Voice[]> {
     })();
   }
   return _voices;
+}
+
+// ---- イベント（定例会・セミナー等） ----
+export interface EventItem {
+  pageId: string;
+  name: string;
+  type: string; // 定例会 / スキルアップ講座 / リーディング会 / ロープレ / マルシェ・イベント / zoom解放日
+  date: string; // ISO（開始）
+  end: string; // ISO（終了・任意）
+  accepting: boolean; // 受付中
+  url: string; // 案内URL
+  memo: string;
+}
+
+let _events: Promise<EventItem[]> | null = null;
+
+/** イベント一覧（開催日の昇順）。※合言葉などの内部情報は返さない */
+export function getEvents(): Promise<EventItem[]> {
+  if (!_events) {
+    _events = (async () => {
+      const rows = await queryAll(EVENT_DB, {
+        sorts: [{ property: '開催日', direction: 'ascending' }],
+      });
+      return rows.map((r) => {
+        const p = r.properties;
+        return {
+          pageId: r.id,
+          name: pText(p['イベント名']),
+          type: pSelect(p['種別']),
+          date: p['開催日']?.date?.start ?? '',
+          end: p['開催日']?.date?.end ?? '',
+          accepting: pCheckbox(p['受付中']),
+          url: p['案内URL']?.url ?? '',
+          memo: pText(p['メモ']),
+        } as EventItem;
+      });
+    })();
+  }
+  return _events;
 }
 
 // ---- Instagram 埋め込み投稿 ----

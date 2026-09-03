@@ -117,6 +117,29 @@ import { GAS_URL } from '../consts';
       </div>`;
   }
 
+  // ── 参加スタンプ（定例会・セミナー等の参加履歴） ──
+  const STAMP_ICON = {
+    '定例会': '🗓️', 'スキルアップ講座': '📚', 'リーディング会': '🔮',
+    'ロープレ': '🃏', 'マルシェ・イベント': '🎪', 'zoom解放日': '💻',
+  };
+  function stampBlock(stamps) {
+    const list = Array.isArray(stamps) ? stamps : [];
+    const attended = list.filter((s) => s.status === '出席');
+    const inner = list.length
+      ? `<div class="stamp-grid">${list.map((s) => {
+          const ic = STAMP_ICON[s.type] || '✦';
+          const cls = s.status === '出席' ? 'is-on' : (s.status === '申込' ? 'is-up' : '');
+          const meta = [s.date, s.status].filter(Boolean).map(esc).join(' ・ ');
+          return `<div class="stamp ${cls}"><span class="stamp-ic">${ic}</span>`
+            + `<span class="stamp-name">${esc(s.event || s.type || 'イベント')}</span>`
+            + `<span class="stamp-meta">${meta}</span></div>`;
+        }).join('')}</div>`
+      : '<p class="chip-empty">まだ参加記録がありません。定例会やセミナーに参加するとスタンプがたまります。</p>';
+    return `<div class="block">`
+      + `<h2 class="block-h">参加スタンプ <span class="stamp-count">出席 ${attended.length} 回</span></h2>`
+      + `${inner}</div>`;
+  }
+
   function renderDash(d) {
     loginBox.hidden = true;
     dash.hidden = false;
@@ -133,16 +156,12 @@ import { GAS_URL } from '../consts';
         <button id="logout" class="btn btn-ghost btn-sm">ログアウト</button>
       </div>
 
-      <div class="score-grid">
-        <div class="score-card">
-          <p class="score-label">今期得点</p>
-          <p class="score-value">${d.thisTerm != null ? esc(d.thisTerm) : '—'}<span class="score-unit">点</span></p>
-        </div>
-        <div class="score-card accent">
-          <p class="score-label">通算得点</p>
-          <p class="score-value">${d.total != null ? esc(d.total) : '—'}<span class="score-unit">点</span></p>
-        </div>
+      <div class="block">
+        <h2 class="block-h">対応占術</h2>
+        <div class="chip-row">${chips(d.arts, 'chip-art')}</div>
       </div>
+
+      ${stampBlock(d.stamps)}
 
       ${evalSection(d.evaluation)}
 
@@ -255,16 +274,6 @@ import { GAS_URL } from '../consts';
   #dash .dash-sub { color: var(--color-text-muted); font-size: 0.88rem; margin-top: 0.3rem; }
   #dash .teller { display: inline-block; margin-left: 0.3rem; }
 
-  #dash .score-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.8rem; }
-  #dash .score-card {
-    background: var(--color-bg-soft); border: 1px solid var(--color-border);
-    border-radius: 14px; padding: 1.3rem 1rem; text-align: center;
-  }
-  #dash .score-card.accent { border-color: var(--color-primary); }
-  #dash .score-label { color: var(--color-text-muted); font-size: 0.85rem; }
-  #dash .score-value { font-size: 2.4rem; font-weight: 800; color: var(--color-primary-soft); line-height: 1.1; margin-top: 0.3rem; }
-  #dash .score-unit { font-size: 1rem; font-weight: 600; margin-left: 0.15rem; }
-
   #dash .block { margin-bottom: 1.5rem; }
   #dash .block-h { font-size: 1.05rem; margin-bottom: 0.7rem; color: var(--color-primary-soft); }
   #dash .chip-row { display: flex; flex-wrap: wrap; gap: 0.5rem; }
@@ -274,7 +283,31 @@ import { GAS_URL } from '../consts';
   }
   #dash .chip-title { border-color: var(--color-accent); color: var(--color-accent-soft); }
   #dash .chip-cert { color: var(--color-primary-soft); }
+  #dash .chip-art { border-color: var(--color-primary); color: var(--color-primary-soft); }
   #dash .chip-empty { color: var(--color-text-muted); font-size: 0.88rem; }
+
+  /* 参加スタンプ */
+  #dash .stamp-count { font-size: 0.8rem; font-weight: 700; color: var(--color-text-muted); margin-left: 0.4rem; }
+  #dash .stamp-grid {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(150px, 1fr)); gap: 0.7rem;
+  }
+  #dash .stamp {
+    display: flex; flex-direction: column; align-items: center; text-align: center;
+    gap: 0.25rem; padding: 0.9rem 0.6rem;
+    border: 1px dashed var(--color-border); border-radius: 14px;
+    background: var(--color-bg-soft); opacity: 0.75;
+  }
+  #dash .stamp.is-on { border-style: solid; border-color: var(--color-primary); opacity: 1; }
+  #dash .stamp.is-up { border-style: dashed; border-color: var(--color-accent); opacity: 1; }
+  #dash .stamp-ic {
+    font-size: 1.7rem; line-height: 1;
+    width: 48px; height: 48px; display: flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: var(--color-surface); border: 1px solid var(--color-border);
+    filter: grayscale(0.6);
+  }
+  #dash .stamp.is-on .stamp-ic { filter: none; box-shadow: 0 3px 10px rgba(46, 74, 138, 0.18); }
+  #dash .stamp-name { font-size: 0.82rem; font-weight: 700; line-height: 1.4; }
+  #dash .stamp-meta { font-size: 0.72rem; color: var(--color-text-muted); }
   #dash .course-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--color-text-muted); font-size: 0.92rem; }
 
   /* 鑑定ロープレ評価（パラメータ） */
