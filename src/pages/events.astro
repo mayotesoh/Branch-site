@@ -441,6 +441,10 @@ const past = allEvents
     justify-content: center;
     padding: 1rem;
   }
+  /* hidden属性がdisplay:flexに負けないよう明示的に非表示 */
+  .ev-modal[hidden] {
+    display: none;
+  }
   .ev-modal-backdrop {
     position: absolute;
     inset: 0;
