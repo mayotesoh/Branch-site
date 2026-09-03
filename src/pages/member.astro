@@ -195,9 +195,10 @@ const memberEvents = (await getEvents())
         + `<div class="mev-actions">${actions}</div>`
         + `<p class="mev-msg" data-id="${esc(e.id)}" aria-live="polite"></p></div>`;
     }).join('');
-    return `<div class="block"><h2 class="block-h">イベント予約・出席</h2>`
+    return `<details class="block mev-block" open>`
+      + `<summary class="block-h mev-summary">イベント予約・出席</summary>`
       + `<p class="mev-lead">参加したいイベントを予約できます。当日は運営が発表する合言葉を入力すると出席になります。</p>`
-      + `<div class="mev-list">${rows}</div></div>`;
+      + `<div class="mev-list">${rows}</div></details>`;
   }
 
   function renderDash(d) {
@@ -440,6 +441,17 @@ const memberEvents = (await getEvents())
   #dash .stamp-meta { font-size: 0.72rem; color: var(--color-text-muted); }
 
   /* イベント予約・出席 */
+  #dash .mev-summary {
+    display: flex; align-items: center; gap: 0.4rem;
+    cursor: pointer; list-style: none; user-select: none;
+  }
+  #dash .mev-summary::-webkit-details-marker { display: none; }
+  #dash .mev-summary::after {
+    content: '▾'; margin-left: auto; font-size: 0.85em;
+    color: var(--color-text-muted); transition: transform 0.2s ease;
+  }
+  #dash .mev-block:not([open]) .mev-summary::after { transform: rotate(-90deg); }
+  #dash .mev-block:not([open]) .mev-summary { margin-bottom: 0; }
   #dash .mev-lead { color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 0.9rem; line-height: 1.7; }
   #dash .mev-list { display: grid; gap: 0.8rem; }
   #dash .mev {
