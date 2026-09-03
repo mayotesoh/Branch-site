@@ -2,17 +2,42 @@
 import Layout from '../layouts/Layout.astro';
 import LineButton from '../components/LineButton.astro';
 import { INSTAGRAM_URL } from '../consts';
-import { getInstaPosts, getPosts } from '../lib/notion';
+import { getInstaPosts, getPosts, getEvents } from '../lib/notion';
 
 const base = import.meta.env.BASE_URL;
 const joinUrl = `${base.replace(/\/$/, '')}/join`;
 const blogUrl = `${base.replace(/\/$/, '')}/blog`;
+const eventsUrl = `${base.replace(/\/$/, '')}/events`;
 const postUrl = (slug: string) => `${base.replace(/\/$/, '')}/blog/${slug}`;
 const fmtDate = (d: Date) =>
   `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 
+const EV_TYPE_ICON: Record<string, string> = {
+  定例会: '🗓️',
+  スキルアップ講座: '📚',
+  リーディング会: '🔮',
+  ロープレ: '🃏',
+  'マルシェ・イベント': '🎪',
+  zoom解放日: '💻',
+};
+const EV_WD = ['日', '月', '火', '水', '木', '金', '土'];
+const fmtEvent = (iso: string) => {
+  const d = new Date(iso);
+  const time = iso.includes('T')
+    ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
+    : '';
+  return { md: `${d.getMonth() + 1}/${d.getDate()}`, wd: EV_WD[d.getDay()], time };
+};
+
 const instaPosts = await getInstaPosts();
 const latestPosts = (await getPosts()).slice(0, 3);
+
+// 今後のイベント（開催日が今日以降）を近い順に最大3件
+const _today = new Date();
+_today.setHours(0, 0, 0, 0);
+const upcomingEvents = (await getEvents())
+  .filter((e) => e.date && new Date(e.date).getTime() >= _today.getTime())
+  .slice(0, 3);
 
 const features = [
   {
@@ -98,6 +123,56 @@ const steps = [
       </div>
     </div>
   </section>
+
+  <!-- 今後のイベント -->
+  {
+    upcomingEvents.length > 0 && (
+      <section class="section">
+        <div class="container">
+          <h2 class="section-title">今後のイベント</h2>
+          <p class="section-lead">定例会・講座・リーディング会など、次の学びの場</p>
+          <ul class="home-ev-list">
+            {upcomingEvents.map((e) => {
+              const d = fmtEvent(e.date);
+              return (
+                <li class="home-ev">
+                  <div class="home-ev-date">
+                    <span class="home-ev-md">{d.md}</span>
+                    <span class="home-ev-wd">（{d.wd}）{d.time}</span>
+                  </div>
+                  <div class="home-ev-body">
+                    <div class="home-ev-tags">
+                      {e.type && (
+                        <span class="home-ev-type">
+                          {EV_TYPE_ICON[e.type] ?? '✦'} {e.type}
+                        </span>
+                      )}
+                      {e.accepting && <span class="home-ev-open">受付中</span>}
+                    </div>
+                    <p class="home-ev-name">{e.name}</p>
+                  </div>
+                  {e.url && (
+                    <a
+                      class="home-ev-cta"
+                      href={e.url}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${e.name}の詳細`}
+                    >
+                      詳細 →
+                    </a>
+                  )}
+                </li>
+              );
+            })}
+          </ul>
+          <div class="home-ev-more">
+            <a class="btn btn-primary" href={eventsUrl}>イベント一覧を見る →</a>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   <!-- Features -->
   <section id="features" class="section section-alt">
@@ -330,6 +405,105 @@ const steps = [
   .insta-follow {
     text-align: center;
     margin-top: 2rem;
+  }
+
+  /* 今後のイベント */
+  .home-ev-list {
+    list-style: none;
+    display: grid;
+    gap: 0.9rem;
+    max-width: 780px;
+    margin-inline: auto;
+  }
+  .home-ev {
+    display: flex;
+    align-items: center;
+    gap: 1.1rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-primary);
+    border-radius: var(--radius);
+    padding: 1rem 1.3rem;
+  }
+  .home-ev-date {
+    flex-shrink: 0;
+    width: 92px;
+    text-align: center;
+    border-right: 1px solid var(--color-border);
+    padding-right: 1rem;
+  }
+  .home-ev-md {
+    display: block;
+    font-size: 1.3rem;
+    font-weight: 800;
+    color: var(--color-primary-soft);
+    line-height: 1.1;
+  }
+  .home-ev-wd {
+    font-size: 0.75rem;
+    color: var(--color-text-muted);
+  }
+  .home-ev-body {
+    flex: 1;
+    min-width: 0;
+  }
+  .home-ev-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.3rem;
+  }
+  .home-ev-type {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.74rem;
+    color: var(--color-text-muted);
+  }
+  .home-ev-open {
+    background: #06c755;
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.15rem 0.6rem;
+    font-size: 0.74rem;
+    font-weight: 700;
+  }
+  .home-ev-name {
+    font-weight: 700;
+    line-height: 1.5;
+  }
+  .home-ev-cta {
+    flex-shrink: 0;
+    font-weight: 700;
+    font-size: 0.88rem;
+    color: var(--color-primary-soft);
+    white-space: nowrap;
+  }
+  .home-ev-cta:hover {
+    color: var(--color-primary);
+  }
+  .home-ev-more {
+    text-align: center;
+    margin-top: 2rem;
+  }
+  @media (max-width: 560px) {
+    .home-ev {
+      flex-wrap: wrap;
+      gap: 0.7rem 1rem;
+    }
+    .home-ev-date {
+      width: auto;
+      text-align: left;
+      border-right: none;
+      padding-right: 0;
+      display: flex;
+      align-items: baseline;
+      gap: 0.4rem;
+    }
+    .home-ev-cta {
+      margin-left: auto;
+    }
   }
 
   /* 最新のブログ */
