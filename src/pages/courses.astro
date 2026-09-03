@@ -24,6 +24,7 @@ const certCourses = allCourses
     note: c.note,
     curriculum: c.curriculum,
     extra: c.extra,
+    arts: c.arts,
   }));
 
 // カテゴリ別メタ（アイコン・リード文はコード側で保持）
@@ -65,6 +66,7 @@ const categories: {
     method: string;
     time: string;
     note: string;
+    arts: string[];
   }[];
 }[] = [];
 for (const c of sessionCourses) {
@@ -82,6 +84,7 @@ for (const c of sessionCourses) {
     method: c.method,
     time: c.period,
     note: c.note,
+    arts: c.arts,
   });
 }
 
@@ -92,6 +95,15 @@ const filterGroups = [
     : []),
   ...categories.map((c) => ({ key: c.name, label: c.name, icon: c.icon })),
 ];
+
+// 占術フィルター（講座に設定された占術を出現順に）
+const ART_ICON: Record<string, string> = {
+  タロット: '🃏', 手相: '🖐️', 占星術: '🌟', 筆跡: '✍️',
+  カード: '🎴', 数秘: '🔢', ルノルマン: '🎴', オラクル: '🔮',
+};
+const artSet: string[] = [];
+for (const c of allCourses) for (const a of c.arts) if (!artSet.includes(a)) artSet.push(a);
+const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '🔮' }));
 ---
 
 <Layout
@@ -106,19 +118,38 @@ const filterGroups = [
         あなたのステージに合わせた講座とセッションを用意しています。
       </p>
 
-      <!-- タグで絞り込み -->
+      <!-- カテゴリで絞り込み -->
       {
         filterGroups.length > 1 && (
-          <div class="course-filter" id="courseFilter">
-            <button class="chip is-active" data-filter="all" type="button">
-              すべて
-            </button>
-            {filterGroups.map((g) => (
-              <button class="chip" data-filter={g.key} type="button">
-                <span class="chip-ico">{g.icon}</span>
-                {g.label}
-              </button>
-            ))}
+          <div class="filter-bar">
+            <span class="filter-label">カテゴリ</span>
+            <div class="course-filter" id="courseFilter">
+              <button class="chip is-active" data-filter="all" type="button">すべて</button>
+              {filterGroups.map((g) => (
+                <button class="chip" data-filter={g.key} type="button">
+                  <span class="chip-ico">{g.icon}</span>
+                  {g.label}
+                </button>
+              ))}
+            </div>
+          </div>
+        )
+      }
+
+      <!-- 占術で絞り込み -->
+      {
+        artFilters.length > 0 && (
+          <div class="filter-bar">
+            <span class="filter-label">占術</span>
+            <div class="course-filter" id="artFilter">
+              <button class="chip is-active" data-art="all" type="button">すべて</button>
+              {artFilters.map((a) => (
+                <button class="chip" data-art={a.key} type="button">
+                  <span class="chip-ico">{a.icon}</span>
+                  {a.label}
+                </button>
+              ))}
+            </div>
           </div>
         )
       }
@@ -139,7 +170,7 @@ const filterGroups = [
         <div class="cert-grid">
           {
             certCourses.map((c) => (
-              <article class="cert-card">
+              <article class="cert-card" data-arts={c.arts.join('|')}>
                 <div class="cert-head">
                   <h3 class="cert-name">{c.name}</h3>
                   {c.note && <span class="badge badge-note">※ {c.note}</span>}
@@ -147,6 +178,9 @@ const filterGroups = [
                 <p class="cert-course">{c.course}</p>
                 <p class="cert-target">{c.target}</p>
                 <div class="meta">
+                  {c.arts.map((a) => (
+                    <span class="badge badge-art">{ART_ICON[a] ?? '🔮'} {a}</span>
+                  ))}
                   {c.instructor && <span class="badge">👤 {c.instructor}</span>}
                   {c.period && <span class="badge">⏱ {c.period}</span>}
                   {c.online && <span class="badge">💻 {c.online}</span>}
@@ -181,10 +215,13 @@ const filterGroups = [
             </div>
             <ul class="course-grid">
               {cat.items.map((item) => (
-                <li class="course-card">
+                <li class="course-card" data-arts={item.arts.join('|')}>
                   <p class="course-title">{item.title}</p>
                   <p class="course-desc">{item.desc}</p>
                   <div class="meta">
+                    {item.arts.map((a) => (
+                      <span class="badge badge-art">{ART_ICON[a] ?? '🔮'} {a}</span>
+                    ))}
                     {item.instructor && <span class="badge">👤 {item.instructor}</span>}
                     {item.time && <span class="badge">⏱ {item.time}</span>}
                     {item.method && <span class="badge badge-method">{item.method}</span>}
@@ -209,37 +246,74 @@ const filterGroups = [
   </section>
 
   <script>
-    const bar = document.getElementById('courseFilter');
-    if (bar) {
-      const chips = Array.from(bar.querySelectorAll('.chip'));
-      const groups = Array.from(document.querySelectorAll('.cat[data-group]'));
-      const emptyMsg = document.getElementById('filterEmpty');
+    const catBar = document.getElementById('courseFilter');
+    const artBar = document.getElementById('artFilter');
+    const groups = Array.from(document.querySelectorAll('.cat[data-group]')) as HTMLElement[];
+    const emptyMsg = document.getElementById('filterEmpty');
+    let selCat = 'all';
+    let selArt = 'all';
+
+    function apply() {
+      let anySection = 0;
+      groups.forEach((sec) => {
+        const secMatchCat = selCat === 'all' || sec.dataset.group === selCat;
+        let visibleCards = 0;
+        sec.querySelectorAll('[data-arts]').forEach((card) => {
+          const el = card as HTMLElement;
+          const arts = el.dataset.arts ? el.dataset.arts.split('|').filter(Boolean) : [];
+          const artMatch = selArt === 'all' || arts.indexOf(selArt) !== -1;
+          const show = secMatchCat && artMatch;
+          el.hidden = !show;
+          if (show) visibleCards++;
+        });
+        const showSec = secMatchCat && visibleCards > 0;
+        sec.hidden = !showSec;
+        if (showSec) anySection++;
+      });
+      if (emptyMsg) emptyMsg.hidden = anySection > 0;
+    }
+
+    function wire(bar: HTMLElement | null, key: 'cat' | 'art') {
+      if (!bar) return;
+      const chips = Array.from(bar.querySelectorAll('.chip')) as HTMLElement[];
       bar.addEventListener('click', (e) => {
         const chip = (e.target as HTMLElement).closest('.chip') as HTMLElement | null;
         if (!chip) return;
-        const filter = chip.dataset.filter;
         chips.forEach((c) => c.classList.toggle('is-active', c === chip));
-        let shown = 0;
-        groups.forEach((g) => {
-          const match = filter === 'all' || (g as HTMLElement).dataset.group === filter;
-          (g as HTMLElement).hidden = !match;
-          if (match) shown++;
-        });
-        if (emptyMsg) emptyMsg.hidden = shown > 0;
+        const val = key === 'cat' ? chip.dataset.filter : chip.dataset.art;
+        if (key === 'cat') selCat = val || 'all';
+        else selArt = val || 'all';
+        apply();
       });
     }
+    wire(catBar, 'cat');
+    wire(artBar, 'art');
   </script>
 </Layout>
 
 <style>
-  /* タグ絞り込み */
+  /* 絞り込み */
+  .filter-bar {
+    max-width: 900px;
+    margin: 0 auto 1.1rem;
+  }
+  .filter-bar:last-of-type {
+    margin-bottom: 2.8rem;
+  }
+  .filter-label {
+    display: block;
+    text-align: center;
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+    margin-bottom: 0.5rem;
+    letter-spacing: 0.04em;
+  }
   .course-filter {
     display: flex;
     flex-wrap: wrap;
     gap: 0.6rem;
     justify-content: center;
-    margin: 0 auto 3rem;
-    max-width: 900px;
   }
   .chip {
     display: inline-flex;
@@ -316,6 +390,11 @@ const filterGroups = [
   }
   .badge-method {
     background: transparent;
+  }
+  .badge-art {
+    background: var(--color-primary);
+    border-color: var(--color-primary);
+    color: #fff;
   }
   .badge-note {
     background: transparent;

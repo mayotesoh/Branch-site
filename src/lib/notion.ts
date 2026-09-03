@@ -181,7 +181,9 @@ export interface Course {
   pageId: string; // 申込フォームから講座を指定するのに使う
   name: string;
   type: string; // 養成講座 / セッション
-  category: string;
+  category: string; // グルーピング用の主カテゴリ（categories の先頭）
+  categories: string[]; // カテゴリ（マルチセレクト全値）
+  arts: string[]; // 占術（タロット/手相/占星術 など）
   instructor: string;
   courseName: string;
   desc: string;
@@ -241,11 +243,14 @@ export function getCourses(): Promise<Course[]> {
                   .join('')
               );
           }
+          const cats = pMulti(p['カテゴリ']);
           return {
             pageId: r.id,
             name: pText(p['講座名']),
             type,
-            category: pSelect(p['カテゴリ']),
+            category: cats[0] ?? '',
+            categories: cats,
+            arts: pMulti(p['占術']),
             instructor: pRelIds(p['担当講師'])
               .map((id: string) => instrMap.get(id))
               .filter(Boolean)
