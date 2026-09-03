@@ -1,0 +1,205 @@
+---
+// イベント詳細モーダル（イベント一覧・ホームで共用）。
+// ページ側で [data-ev-open="<イベントid>"] を持つ要素をクリックすると開く。
+interface EvItem {
+  id: string;
+  name: string;
+  type: string;
+  date: string;
+  end: string;
+  url: string;
+  accepting: boolean;
+  memo: string;
+  body: string;
+}
+const { events = [] } = Astro.props as { events: EvItem[] };
+---
+
+<div class="ev-modal" id="evModal" hidden>
+  <div class="ev-modal-backdrop" data-close></div>
+  <div class="ev-modal-box" role="dialog" aria-modal="true" aria-labelledby="evmName">
+    <button class="ev-modal-x" type="button" aria-label="閉じる" data-close>×</button>
+    <div class="ev-modal-tags" id="evmTags"></div>
+    <h3 class="ev-modal-name" id="evmName"></h3>
+    <p class="ev-modal-date" id="evmDate"></p>
+    <div class="ev-modal-body" id="evmBody"></div>
+    <div class="ev-modal-actions" id="evmActions"></div>
+  </div>
+</div>
+
+<script define:vars={{ events }} is:inline>
+  (function () {
+    const WD = ['日', '月', '火', '水', '木', '金', '土'];
+    const ICON = {
+      '定例会': '🗓️', 'スキルアップ講座': '📚', 'リーディング会': '🔮',
+      'ロープレ': '🃏', 'マルシェ・イベント': '🎪', 'zoom解放日': '💻',
+    };
+    const esc = (s) =>
+      String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+        ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
+      );
+    const timeStr = (iso) => {
+      if (!iso || !iso.includes('T')) return '';
+      const d = new Date(iso);
+      return `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`;
+    };
+
+    const modal = document.getElementById('evModal');
+    if (!modal) return;
+    const mTags = document.getElementById('evmTags');
+    const mName = document.getElementById('evmName');
+    const mDate = document.getElementById('evmDate');
+    const mBody = document.getElementById('evmBody');
+    const mActions = document.getElementById('evmActions');
+
+    const byId = {};
+    (events || []).forEach((e) => (byId[e.id] = e));
+
+    function fmtRange(e) {
+      const s = new Date(e.date);
+      if (isNaN(s)) return '';
+      let str = `${s.getFullYear()}年${s.getMonth() + 1}月${s.getDate()}日（${WD[s.getDay()]}）`;
+      const st = timeStr(e.date);
+      if (st) {
+        str += ` ${st}`;
+        const et = timeStr(e.end);
+        if (et) str += `〜${et}`;
+      }
+      return str;
+    }
+
+    function openDetail(e) {
+      let tags = '';
+      if (e.type) tags += `<span class="evm-type">${ICON[e.type] || '✦'} ${esc(e.type)}</span>`;
+      if (e.accepting) tags += `<span class="evm-open">受付中</span>`;
+      mTags.innerHTML = tags;
+      mName.textContent = e.name || 'イベント';
+      mDate.textContent = fmtRange(e);
+      mBody.innerHTML = e.body || (e.memo ? `<p>${esc(e.memo)}</p>` : '<p class="evm-none">詳細は準備中です。</p>');
+      mActions.innerHTML = e.url
+        ? `<a class="btn btn-primary" href="${esc(e.url)}" target="_blank" rel="noopener noreferrer">申し込み・詳細ページ →</a>`
+        : '';
+      modal.hidden = false;
+      document.body.style.overflow = 'hidden';
+    }
+    function closeDetail() {
+      modal.hidden = true;
+      document.body.style.overflow = '';
+    }
+
+    // ページ内の [data-ev-open] クリックで開く（カレンダー・ホーム共通）
+    document.addEventListener('click', (e) => {
+      const trigger = e.target.closest('[data-ev-open]');
+      if (trigger) {
+        const ev = byId[trigger.getAttribute('data-ev-open')];
+        if (ev) { openDetail(ev); return; }
+      }
+      if (e.target.closest('[data-close]') && !modal.hidden) closeDetail();
+    });
+    document.addEventListener('keydown', (e) => {
+      if (e.key === 'Escape' && !modal.hidden) closeDetail();
+    });
+  })();
+</script>
+
+<style>
+  .ev-modal {
+    position: fixed;
+    inset: 0;
+    z-index: 100;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 1rem;
+  }
+  /* hidden属性がdisplay:flexに負けないよう明示的に非表示 */
+  .ev-modal[hidden] {
+    display: none;
+  }
+  .ev-modal-backdrop {
+    position: absolute;
+    inset: 0;
+    background: rgba(9, 16, 38, 0.55);
+    backdrop-filter: blur(2px);
+  }
+  .ev-modal-box {
+    position: relative;
+    z-index: 1;
+    width: 100%;
+    max-width: 520px;
+    max-height: 85vh;
+    overflow-y: auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    padding: 1.8rem 1.6rem 1.6rem;
+    box-shadow: 0 20px 50px rgba(0, 0, 0, 0.3);
+  }
+  .ev-modal-x {
+    position: absolute;
+    top: 0.7rem;
+    right: 0.8rem;
+    width: 34px;
+    height: 34px;
+    border: none;
+    background: transparent;
+    font-size: 1.6rem;
+    line-height: 1;
+    color: var(--color-text-muted);
+    cursor: pointer;
+  }
+  .ev-modal-x:hover { color: var(--color-text); }
+  .ev-modal-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.4rem;
+    margin-bottom: 0.6rem;
+  }
+  .ev-modal-tags:empty { margin-bottom: 0; }
+  .evm-type {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.78rem;
+    color: var(--color-text-muted);
+  }
+  .evm-open {
+    background: #06c755;
+    color: #fff;
+    border-radius: 999px;
+    padding: 0.2rem 0.7rem;
+    font-size: 0.78rem;
+    font-weight: 700;
+  }
+  .ev-modal-name {
+    font-size: 1.35rem;
+    line-height: 1.4;
+    margin-bottom: 0.4rem;
+  }
+  .ev-modal-date {
+    color: var(--color-primary-soft);
+    font-weight: 700;
+    margin-bottom: 1.1rem;
+  }
+  .ev-modal-body {
+    color: var(--color-text);
+    font-size: 0.95rem;
+    line-height: 1.9;
+  }
+  .ev-modal-body :global(p) { margin: 0 0 0.8rem; }
+  .ev-modal-body :global(p:last-child) { margin-bottom: 0; }
+  .ev-modal-body :global(h1),
+  .ev-modal-body :global(h2),
+  .ev-modal-body :global(h3) { margin: 1rem 0 0.5rem; font-size: 1.05rem; }
+  .ev-modal-body :global(ul),
+  .ev-modal-body :global(ol) { margin: 0 0 0.8rem; padding-left: 1.3rem; }
+  .ev-modal-body :global(li) { margin-bottom: 0.3rem; }
+  .ev-modal-body :global(a) { color: var(--color-primary-soft); text-decoration: underline; }
+  .ev-modal-body :global(img) { border-radius: 10px; margin: 0.5rem 0; }
+  .evm-none { color: var(--color-text-muted); }
+  .ev-modal-actions {
+    margin-top: 1.4rem;
+  }
+  .ev-modal-actions:empty { margin-top: 0; }
+</style>

@@ -1,6 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import LineButton from '../components/LineButton.astro';
+import EventModal from '../components/EventModal.astro';
 import { INSTAGRAM_URL } from '../consts';
 import { getInstaPosts, getPosts, getEvents } from '../lib/notion';
 
@@ -38,6 +39,18 @@ _today.setHours(0, 0, 0, 0);
 const upcomingEvents = (await getEvents())
   .filter((e) => e.date && new Date(e.date).getTime() >= _today.getTime())
   .slice(0, 3);
+// 詳細モーダル用データ（クリックでNotion本文を表示）
+const homeEventData = upcomingEvents.map((e) => ({
+  id: e.pageId,
+  name: e.name,
+  type: e.type,
+  date: e.date,
+  end: e.end,
+  url: e.url,
+  accepting: e.accepting,
+  memo: e.memo,
+  body: e.body,
+}));
 
 const features = [
   {
@@ -135,33 +148,30 @@ const steps = [
             {upcomingEvents.map((e) => {
               const d = fmtEvent(e.date);
               return (
-                <li class="home-ev">
-                  <div class="home-ev-date">
-                    <span class="home-ev-md">{d.md}</span>
-                    <span class="home-ev-wd">（{d.wd}）{d.time}</span>
-                  </div>
-                  <div class="home-ev-body">
-                    <div class="home-ev-tags">
-                      {e.type && (
-                        <span class="home-ev-type">
-                          {EV_TYPE_ICON[e.type] ?? '✦'} {e.type}
-                        </span>
-                      )}
-                      {e.accepting && <span class="home-ev-open">受付中</span>}
+                <li>
+                  <button
+                    class="home-ev"
+                    type="button"
+                    data-ev-open={e.pageId}
+                    aria-label={`${e.name}の詳細を見る`}
+                  >
+                    <div class="home-ev-date">
+                      <span class="home-ev-md">{d.md}</span>
+                      <span class="home-ev-wd">（{d.wd}）{d.time}</span>
                     </div>
-                    <p class="home-ev-name">{e.name}</p>
-                  </div>
-                  {e.url && (
-                    <a
-                      class="home-ev-cta"
-                      href={e.url}
-                      target="_blank"
-                      rel="noopener noreferrer"
-                      aria-label={`${e.name}の詳細`}
-                    >
-                      詳細 →
-                    </a>
-                  )}
+                    <div class="home-ev-body">
+                      <div class="home-ev-tags">
+                        {e.type && (
+                          <span class="home-ev-type">
+                            {EV_TYPE_ICON[e.type] ?? '✦'} {e.type}
+                          </span>
+                        )}
+                        {e.accepting && <span class="home-ev-open">受付中</span>}
+                      </div>
+                      <p class="home-ev-name">{e.name}</p>
+                    </div>
+                    <span class="home-ev-cta">詳細 →</span>
+                  </button>
                 </li>
               );
             })}
@@ -306,6 +316,8 @@ const steps = [
       </div>
     </div>
   </section>
+
+  {homeEventData.length > 0 && <EventModal events={homeEventData} />}
 </Layout>
 
 <style>
@@ -419,11 +431,21 @@ const steps = [
     display: flex;
     align-items: center;
     gap: 1.1rem;
+    width: 100%;
+    text-align: left;
+    font: inherit;
+    color: inherit;
+    cursor: pointer;
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-left: 4px solid var(--color-primary);
     border-radius: var(--radius);
     padding: 1rem 1.3rem;
+    transition: border-color 0.15s ease, box-shadow 0.2s ease;
+  }
+  .home-ev:hover {
+    border-color: var(--color-primary);
+    box-shadow: 0 8px 20px rgba(26, 36, 64, 0.1);
   }
   .home-ev-date {
     flex-shrink: 0;
