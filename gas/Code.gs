@@ -72,6 +72,10 @@ function doPost(e) {
     if (data && data.action === 'event_checkin') {
       return handleEventCheckin(data); // MemberPortal.gs
     }
+    // (I) 会員ページ 予約キャンセル（申込の参加記録を削除）
+    if (data && data.action === 'event_cancel') {
+      return handleEventCancel(data); // MemberPortal.gs
+    }
 
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);

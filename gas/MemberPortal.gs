@@ -170,6 +170,24 @@ function handleEventReserve(data) {
 }
 
 /**
+ * 予約キャンセル（event_cancel）：申込の参加記録を削除（アーカイブ）
+ * ※すでに出席済みのものはキャンセル不可
+ * @param {{memberNo:string, pin:string, eventId:string}} data
+ */
+function handleEventCancel(data) {
+  const eventId = String(data.eventId || '').trim();
+  if (!eventId) throw new Error('イベントが指定されていません。');
+  const hit = mpFindMember_(data.memberNo, data.pin);
+  const existing = mpFindPart_(hit.id, eventId);
+  if (!existing) throw new Error('この予約は見つかりませんでした。');
+  const st = (existing.properties['状態'] && existing.properties['状態'].select)
+    ? existing.properties['状態'].select.name : '';
+  if (st === '出席') throw new Error('すでに出席済みのため取り消せません。');
+  cpApi_('pages/' + existing.id, 'patch', { archived: true });
+  return jsonOutput({ status: 'ok', cancelled: true });
+}
+
+/**
  * 出席確認（event_checkin）：合言葉を照合し参加記録を「出席」に
  * @param {{memberNo:string, pin:string, eventId:string, code:string}} data
  */

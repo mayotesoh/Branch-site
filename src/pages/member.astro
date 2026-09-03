@@ -180,7 +180,8 @@ const memberEvents = (await getEvents())
         actions = '<span class="mev-done">✓ 出席済み</span>';
       } else {
         const reserve = st === '申込'
-          ? '<span class="mev-reserved">✓ 予約済み</span>'
+          ? `<span class="mev-reserved">✓ 予約済み</span>`
+            + `<button class="btn btn-ghost btn-sm mev-cancel" data-id="${esc(e.id)}">予約を取り消す</button>`
           : `<button class="btn btn-primary btn-sm mev-reserve" data-id="${esc(e.id)}">予約する</button>`;
         actions = `${reserve}`
           + `<div class="mev-checkin">`
@@ -271,11 +272,23 @@ const memberEvents = (await getEvents())
   dash.addEventListener('click', async (e) => {
     const rBtn = e.target.closest('.mev-reserve');
     const aBtn = e.target.closest('.mev-attend');
-    if (!rBtn && !aBtn) return;
-    const id = (rBtn || aBtn).dataset.id;
+    const cBtn = e.target.closest('.mev-cancel');
+    if (!rBtn && !aBtn && !cBtn) return;
+    const id = (rBtn || aBtn || cBtn).dataset.id;
     const msgEl = dash.querySelector(`.mev-msg[data-id="${id}"]`);
     const setMsg = (t, ok) => { if (msgEl) { msgEl.textContent = t; msgEl.className = 'mev-msg ' + (ok ? 'ok' : 'error'); } };
     if (!creds) { setMsg('再ログインしてください。', false); return; }
+
+    if (cBtn) {
+      if (!confirm('この予約を取り消しますか？')) return;
+      cBtn.disabled = true; cBtn.textContent = '取消中…';
+      try {
+        const r = await postGas({ action: 'event_cancel', memberNo: creds.no, pin: creds.pin, eventId: id });
+        if (r.status === 'ok') { setMsg('予約を取り消しました。', true); await refreshDash(); }
+        else { setMsg(r.message || 'キャンセルできませんでした。', false); cBtn.disabled = false; cBtn.textContent = '予約を取り消す'; }
+      } catch (err) { setMsg('通信に失敗しました。', false); cBtn.disabled = false; cBtn.textContent = '予約を取り消す'; }
+      return;
+    }
 
     if (rBtn) {
       rBtn.disabled = true; rBtn.textContent = '送信中…';
