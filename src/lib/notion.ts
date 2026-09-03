@@ -280,8 +280,8 @@ export async function getPostHtml(slug: string): Promise<string> {
   return localizeHtml(await marked.parse(md));
 }
 
-/** スタッフ（講師DBページ）の本文＝自己紹介をHTMLで返す（空なら ''） */
-export async function getAuthorBioHtml(pageId: string): Promise<string> {
+/** 任意のNotionページ本文をHTMLで返す（空なら ''）。画像URLはローカル化。 */
+export async function getPageBodyHtml(pageId: string): Promise<string> {
   try {
     const mdblocks = await n2m.pageToMarkdown(pageId);
     const md = (n2m.toMarkdownString(mdblocks).parent ?? '').trim();
@@ -290,6 +290,11 @@ export async function getAuthorBioHtml(pageId: string): Promise<string> {
   } catch {
     return '';
   }
+}
+
+/** スタッフ（講師DBページ）の本文＝自己紹介をHTMLで返す（空なら ''） */
+export async function getAuthorBioHtml(pageId: string): Promise<string> {
+  return getPageBodyHtml(pageId);
 }
 
 // ---- 会員の声（受講生の感想・実績） ----
@@ -350,6 +355,7 @@ export interface EventItem {
   accepting: boolean; // 受付中
   url: string; // 案内URL
   memo: string;
+  body: string; // ページ本文（「開く」で書いた詳細）のHTML
 }
 
 let _events: Promise<EventItem[]> | null = null;
@@ -361,19 +367,22 @@ export function getEvents(): Promise<EventItem[]> {
       const rows = await queryAll(EVENT_DB, {
         sorts: [{ property: '開催日', direction: 'ascending' }],
       });
-      return rows.map((r) => {
-        const p = r.properties;
-        return {
-          pageId: r.id,
-          name: pText(p['イベント名']),
-          type: pSelect(p['種別']),
-          date: p['開催日']?.date?.start ?? '',
-          end: p['開催日']?.date?.end ?? '',
-          accepting: pCheckbox(p['受付中']),
-          url: p['案内URL']?.url ?? '',
-          memo: pText(p['メモ']),
-        } as EventItem;
-      });
+      return Promise.all(
+        rows.map(async (r) => {
+          const p = r.properties;
+          return {
+            pageId: r.id,
+            name: pText(p['イベント名']),
+            type: pSelect(p['種別']),
+            date: p['開催日']?.date?.start ?? '',
+            end: p['開催日']?.date?.end ?? '',
+            accepting: pCheckbox(p['受付中']),
+            url: p['案内URL']?.url ?? '',
+            memo: pText(p['メモ']),
+            body: await getPageBodyHtml(r.id),
+          } as EventItem;
+        })
+      );
     })();
   }
   return _events;
