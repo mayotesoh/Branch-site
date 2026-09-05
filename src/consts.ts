@@ -39,8 +39,8 @@ export const LINE_URL = 'https://lin.ee/SZZ4UJj';
  * LABO＝占い師向け（フォーチュンラボ）、GRACE＝お客さま向け（フォーチュングレイス）
  * チャンネルのURL（https://www.youtube.com/@… など）を設定してください。
  */
-export const YOUTUBE_LABO_URL = '';
-export const YOUTUBE_GRACE_URL = '';
+export const YOUTUBE_LABO_URL = 'https://www.youtube.com/@FortuneLabo';
+export const YOUTUBE_GRACE_URL = 'https://www.youtube.com/@Fortune-Grace';
 
 /** LINEボタンの既定ラベル */
 export const LINE_LABEL = 'LINEで予約・相談';
