@@ -76,6 +76,14 @@ function doPost(e) {
     if (data && data.action === 'event_cancel') {
       return handleEventCancel(data); // MemberPortal.gs
     }
+    // (J) 今週の題材への読み解き投稿
+    if (data && data.action === 'submit_reading') {
+      return handleSubmitReading(data); // MemberPortal.gs
+    }
+    // (K) 無料鑑定モニター応募
+    if (data && data.action === 'monitor_apply') {
+      return handleMonitorApply(data); // MemberPortal.gs
+    }
 
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);

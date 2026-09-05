@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
-import { GAS_URL, LINE_URL } from '../consts';
-import { getEvents } from '../lib/notion';
+import { GAS_URL, LINE_URL, SISTER_SITE_URL, SISTER_SITE_NAME } from '../consts';
+import { getEvents, getThemes } from '../lib/notion';
 
 // これから（今日以降）のイベントを予約・出席用に埋め込む
 const _t = new Date();
@@ -16,6 +16,11 @@ const memberEvents = (await getEvents())
     end: e.end,
     accepting: e.accepting,
   }));
+
+// 今週の題材（会員ページから読み解きを投稿できるように）
+const _themes = await getThemes();
+const _cur = _themes.find((t) => t.current) ?? _themes[0] ?? null;
+const memberTheme = _cur ? { id: _cur.pageId, title: _cur.title, desc: _cur.desc } : null;
 ---
 
 <Layout
@@ -75,7 +80,7 @@ const memberEvents = (await getEvents())
   </section>
 </Layout>
 
-<script define:vars={{ GAS_URL, memberEvents }} is:inline>
+<script define:vars={{ GAS_URL, memberEvents, memberTheme, SISTER_SITE_URL, SISTER_SITE_NAME }} is:inline>
   const loginBox = document.getElementById('login');
   const dash = document.getElementById('dash');
   const form = document.getElementById('login-form');
@@ -152,8 +157,17 @@ const memberEvents = (await getEvents())
   // ── 参加スタンプ（定例会・セミナー等の参加履歴） ──
   const STAMP_ICON = {
     '定例会': '🗓️', 'スキルアップ講座': '📚', 'リーディング会': '🔮',
-    'ロープレ': '🃏', 'マルシェ・イベント': '🎪', 'zoom解放日': '💻',
+    'ロープレ': '🃏', 'マルシェ・イベント': '🎪', 'zoom解放日': '💻', 'ライブトーク': '🎙️',
   };
+  // 出席回数に応じた称号
+  function rankFromStamps(n) {
+    if (n >= 30) return '👑 レジェンド';
+    if (n >= 20) return '🌟 マスター';
+    if (n >= 10) return '🔥 皆勤の達人';
+    if (n >= 5) return '✨ 常連メンバー';
+    if (n >= 1) return '🌱 はじめの一歩';
+    return '';
+  }
   function stampBlock(stamps) {
     const list = Array.isArray(stamps) ? stamps : [];
     const attended = list.filter((s) => s.status === '出席');
@@ -167,9 +181,28 @@ const memberEvents = (await getEvents())
             + `<span class="stamp-meta">${meta}</span></div>`;
         }).join('')}</div>`
       : '<p class="chip-empty">まだ参加記録がありません。定例会やセミナーに参加するとスタンプがたまります。</p>';
+    const rank = rankFromStamps(attended.length);
+    const rankHtml = rank ? `<span class="stamp-rank">${esc(rank)}</span>` : '';
     return `<div class="block">`
-      + `<h2 class="block-h">参加スタンプ <span class="stamp-count">出席 ${attended.length} 回</span></h2>`
+      + `<h2 class="block-h">参加スタンプ <span class="stamp-count">出席 ${attended.length} 回</span>${rankHtml}</h2>`
       + `${inner}</div>`;
+  }
+
+  // 今週の題材への読み解き投稿
+  function themeBlock() {
+    if (!memberTheme) return '';
+    return `<details class="block theme-block">`
+      + `<summary class="mev-summary"><span class="mev-summary-t">📝 今週の題材に読み解きを投稿</span>`
+      + `<span class="mev-toggle"><span class="mev-toggle-txt"></span><span class="mev-caret">▾</span></span></summary>`
+      + `<p class="theme-q"><strong>お題：</strong>${esc(memberTheme.title)}</p>`
+      + (memberTheme.desc ? `<p class="theme-qd">${esc(memberTheme.desc)}</p>` : '')
+      + `<label class="theme-lbl">あなたの読み解き</label>`
+      + `<textarea class="theme-input" id="themeContent" rows="5" placeholder="この方をどう読み解きますか？（占術・見立て・アドバイスなど）"></textarea>`
+      + `<label class="theme-lbl">表示名（ペンネーム）</label>`
+      + `<input class="theme-pen" id="themePen" type="text" placeholder="例：さくら" />`
+      + `<label class="theme-pub"><input type="checkbox" id="themePublic" checked /> <span>この読み解きをサイトに公開してよい</span></label>`
+      + `<button class="btn btn-primary btn-sm theme-submit" id="themeSubmit">投稿する</button>`
+      + `<p class="theme-msg" id="themeMsg" aria-live="polite"></p></details>`;
   }
 
   // ── イベント予約・出席確認 ──
@@ -233,11 +266,14 @@ const memberEvents = (await getEvents())
         <div>
           <p class="dash-hello">ようこそ、<strong>${esc(d.name || '会員')}</strong> さん</p>
           <p class="dash-sub">${esc(d.memberNo || '')} ${d.memberStatus ? '／ ' + esc(d.memberStatus) : ''} ${teller}</p>
+          ${(d.coupon != null && d.coupon > 0) ? `<p class="dash-coupon">🎫 クーポン残高：<strong>${esc(d.coupon)}円</strong></p>` : ''}
         </div>
         <button id="logout" class="btn btn-ghost btn-sm">ログアウト</button>
       </div>
 
       ${eventsBlock(d.stamps)}
+
+      ${themeBlock()}
 
       <div class="block">
         <h2 class="block-h">対応占術</h2>
@@ -255,6 +291,11 @@ const memberEvents = (await getEvents())
       <div class="block">
         <h2 class="block-h">受講した講座</h2>
         ${courses}
+      </div>
+
+      <div class="block grace-note">
+        <p>個別鑑定で収益化したい方は、鑑定サイト「${esc(SISTER_SITE_NAME)}」に登録して活動できます。</p>
+        <a class="btn btn-ghost btn-sm" href="${SISTER_SITE_URL}" target="_blank" rel="noopener noreferrer">${esc(SISTER_SITE_NAME)}を見る ↗</a>
       </div>
     `;
     document.getElementById('logout').addEventListener('click', () => {
@@ -288,6 +329,34 @@ const memberEvents = (await getEvents())
       }
     } catch (e) {}
   }
+
+  // 今週の題材への読み解き投稿
+  dash.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.theme-submit');
+    if (!btn) return;
+    const contentEl = document.getElementById('themeContent');
+    const penEl = document.getElementById('themePen');
+    const pubEl = document.getElementById('themePublic');
+    const msgEl = document.getElementById('themeMsg');
+    const setMsg = (t, ok) => { if (msgEl) { msgEl.textContent = t; msgEl.className = 'theme-msg ' + (ok ? 'ok' : 'error'); } };
+    const content = contentEl ? contentEl.value.trim() : '';
+    if (!content) { setMsg('読み解きを入力してください。', false); return; }
+    if (!creds) { setMsg('再ログインしてください。', false); return; }
+    if (!memberTheme) { setMsg('現在のお題がありません。', false); return; }
+    btn.disabled = true; btn.textContent = '投稿中…';
+    try {
+      const r = await postGas({
+        action: 'submit_reading', memberNo: creds.no, pin: creds.pin,
+        themeId: memberTheme.id, content,
+        penName: penEl ? penEl.value.trim() : '',
+        publicOk: pubEl ? pubEl.checked : true,
+      });
+      if (r.status === 'ok') {
+        setMsg('投稿しました！公開にした読み解きは、サイト更新後にお題ページへ表示されます。', true);
+        if (contentEl) contentEl.value = '';
+      } else { setMsg(r.message || '投稿できませんでした。', false); btn.disabled = false; btn.textContent = '投稿する'; }
+    } catch (err) { setMsg('通信に失敗しました。', false); btn.disabled = false; btn.textContent = '投稿する'; }
+  });
 
   // 予約・出席ボタン（ダッシュボードは再描画されるためデリゲートで一度だけ登録）
   dash.addEventListener('click', async (e) => {
@@ -551,6 +620,33 @@ const memberEvents = (await getEvents())
   #dash .mev-msg.ok { color: #06a047; }
   #dash .mev-msg.error { color: #d33; }
   #dash .mev-msg:empty { margin-top: 0; }
+
+  /* クーポン・称号 */
+  #dash .dash-coupon { font-size: 0.85rem; color: var(--color-accent-soft); margin-top: 0.3rem; }
+  #dash .stamp-rank {
+    margin-left: 0.5rem; font-size: 0.78rem; font-weight: 700;
+    background: var(--color-accent); color: #fff; border-radius: 999px; padding: 0.15rem 0.7rem;
+  }
+  #dash .grace-note {
+    background: var(--color-bg-soft); border: 1px dashed var(--color-border);
+    border-radius: 12px; padding: 1rem 1.1rem; color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.7;
+  }
+  #dash .grace-note .btn { margin-top: 0.7rem; }
+
+  /* 今週の題材 投稿 */
+  #dash .theme-q { font-size: 0.95rem; }
+  #dash .theme-qd { color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.8; margin-top: 0.4rem; }
+  #dash .theme-lbl { display: block; font-weight: 700; font-size: 0.85rem; margin: 0.9rem 0 0.3rem; }
+  #dash .theme-input, #dash .theme-pen {
+    width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--color-border);
+    border-radius: 8px; background: var(--color-bg); color: var(--color-text); font-family: inherit; font-size: 0.95rem;
+  }
+  #dash .theme-input:focus, #dash .theme-pen:focus { outline: none; border-color: var(--color-primary); }
+  #dash .theme-pub { display: flex; gap: 0.5rem; align-items: center; font-size: 0.85rem; color: var(--color-text-muted); margin: 0.7rem 0; }
+  #dash .theme-pub input { width: 17px; height: 17px; }
+  #dash .theme-msg { font-size: 0.82rem; margin-top: 0.5rem; min-height: 1em; }
+  #dash .theme-msg.ok { color: #06a047; }
+  #dash .theme-msg.error { color: #d33; }
   #dash .course-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--color-text-muted); font-size: 0.92rem; }
 
   /* 鑑定ロープレ評価（パラメータ） */

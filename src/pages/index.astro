@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import LineButton from '../components/LineButton.astro';
 import EventModal from '../components/EventModal.astro';
 import { INSTAGRAM_URL } from '../consts';
-import { getInstaPosts, getPosts, getEvents } from '../lib/notion';
+import { getInstaPosts, getPosts, getEvents, getThemes } from '../lib/notion';
 
 const base = import.meta.env.BASE_URL;
 const joinUrl = `${base.replace(/\/$/, '')}/join`;
@@ -20,6 +20,7 @@ const EV_TYPE_ICON: Record<string, string> = {
   ロープレ: '🃏',
   'マルシェ・イベント': '🎪',
   zoom解放日: '💻',
+  ライブトーク: '🎙️',
 };
 const EV_WD = ['日', '月', '火', '水', '木', '金', '土'];
 const fmtEvent = (iso: string) => {
@@ -39,6 +40,11 @@ _today.setHours(0, 0, 0, 0);
 const upcomingEvents = (await getEvents())
   .filter((e) => e.date && new Date(e.date).getTime() >= _today.getTime())
   .slice(0, 3);
+
+// 今週の題材
+const _allThemes = await getThemes();
+const currentTheme = _allThemes.find((t) => t.current) ?? _allThemes[0] ?? null;
+const themesUrl = `${base.replace(/\/$/, '')}/themes`;
 // 詳細モーダル用データ（クリックでNotion本文を表示）
 const homeEventData = upcomingEvents.map((e) => ({
   id: e.pageId,
@@ -178,6 +184,31 @@ const steps = [
           </ul>
           <div class="home-ev-more">
             <a class="btn btn-primary" href={eventsUrl}>イベント一覧を見る →</a>
+          </div>
+        </div>
+      </section>
+    )
+  }
+
+  <!-- 今週の題材 -->
+  {
+    currentTheme && (
+      <section class="section">
+        <div class="container">
+          <h2 class="section-title">今週の題材</h2>
+          <p class="section-lead">みんなで同じお題を読み解く「一斉リーディング会」</p>
+          <div class="home-theme">
+            <div class="home-theme-badge">今週のお題</div>
+            <p class="home-theme-title">{currentTheme.title}</p>
+            {currentTheme.desc && <p class="home-theme-desc">{currentTheme.desc}</p>}
+            <div class="home-theme-actions">
+              <a class="btn btn-primary" href={themesUrl}>お題を見る・読み解きを投稿 →</a>
+              {currentTheme.youtube && (
+                <a class="btn btn-ghost" href={currentTheme.youtube} target="_blank" rel="noopener noreferrer">
+                  鑑定結果をYouTubeで見る ↗
+                </a>
+              )}
+            </div>
           </div>
         </div>
       </section>
@@ -418,6 +449,33 @@ const steps = [
     text-align: center;
     margin-top: 2rem;
   }
+
+  /* 今週の題材 */
+  .home-theme {
+    max-width: 720px;
+    margin-inline: auto;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-top: 4px solid var(--color-primary);
+    border-radius: var(--radius);
+    padding: 1.6rem 1.6rem;
+  }
+  .home-theme-badge {
+    display: inline-block;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.76rem;
+    font-weight: 700;
+    padding: 0.2rem 0.8rem;
+    border-radius: 999px;
+    margin-bottom: 0.7rem;
+  }
+  .home-theme-title { font-size: 1.25rem; font-weight: 700; line-height: 1.5; }
+  .home-theme-desc {
+    color: var(--color-text-muted); line-height: 1.9; margin-top: 0.8rem;
+    display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
+  }
+  .home-theme-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.3rem; }
 
   /* 今後のイベント */
   .home-ev-list {

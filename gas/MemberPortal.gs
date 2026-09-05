@@ -15,6 +15,10 @@ const MP_EVAL_ITEMS = ['声・話し方', '聞く姿勢', '言葉選び', '鑑�
 
 // 参加記録DB（会員の定例会・セミナー等の参加履歴＝スタンプ）
 const MP_PART_DB = '3a776a17-0aae-8123-89ea-dbd65a7295e7';
+// お題回答DB（今週の題材への読み解き投稿）
+const MP_ANSWER_DB = '3d276a17-0aae-81c2-8f3a-cf6a1b4f0eb8';
+// モニター応募DB
+const MP_MONITOR_DB = '3d276a17-0aae-8151-9fb1-cf73d0219950';
 
 /** その会員の参加記録（新しい順）。イベント名は関連ページから取得 */
 function mpStamps_(memberPageId) {
@@ -212,6 +216,60 @@ function handleEventCheckin(data) {
 }
 
 /**
+ * 今週の題材への読み解き投稿（submit_reading）
+ * @param {{memberNo:string, pin:string, themeId:string, content:string, penName:string, publicOk:boolean}} data
+ */
+function handleSubmitReading(data) {
+  const themeId = String(data.themeId || '').trim();
+  const content = String(data.content || '').trim();
+  if (!themeId) throw new Error('お題が指定されていません。');
+  if (!content) throw new Error('読み解きを入力してください。');
+  const hit = mpFindMember_(data.memberNo, data.pin);
+  const pen = String(data.penName || '').trim()
+    || cpText_(hit.properties['占い師名'])
+    || cpText_(hit.properties['氏名'])
+    || '匿名';
+  cpApi_('pages', 'post', {
+    parent: { database_id: MP_ANSWER_DB },
+    properties: {
+      '回答': { title: [{ text: { content: pen + 'の読み解き' } }] },
+      'お題': { relation: [{ id: themeId }] },
+      '会員': { relation: [{ id: hit.id }] },
+      'ペンネーム': { rich_text: [{ text: { content: pen.slice(0, 200) } }] },
+      '鑑定内容': { rich_text: [{ text: { content: content.slice(0, 1900) } }] },
+      '公開可': { checkbox: !!data.publicOk },
+      '投稿日': { date: { start: cpToday_() } },
+    },
+  });
+  return jsonOutput({ status: 'ok' });
+}
+
+/**
+ * 無料鑑定モニター応募（monitor_apply）※会員でなくても応募可
+ * @param {{penName,birth,worry,gender,age,pref,birthtime,consent}} data
+ */
+function handleMonitorApply(data) {
+  const pen = String(data.penName || '').trim();
+  const birth = String(data.birth || '').trim();
+  const worry = String(data.worry || '').trim();
+  if (!pen || !birth || !worry) throw new Error('必須項目を入力してください。');
+  if (!data.consent) throw new Error('公開への同意が必要です。');
+  const rt = function (s) { return { rich_text: [{ text: { content: String(s || '').slice(0, 1900) } }] }; };
+  const props = {
+    '応募': { title: [{ text: { content: pen.slice(0, 200) } }] },
+    'ペンネーム': rt(pen), '生年月日': rt(birth), '悩み・背景': rt(worry),
+    '都道府県': rt(data.pref), '年齢': rt(data.age), '出生時間': rt(data.birthtime),
+    '全公開に同意': { checkbox: true },
+    '応募日': { date: { start: cpToday_() } },
+    'ステータス': { select: { name: '応募' } },
+  };
+  if (data.gender) props['性別'] = { select: { name: String(data.gender) } };
+  cpApi_('pages', 'post', { parent: { database_id: MP_MONITOR_DB }, properties: props });
+  try { notifyAdminLine_('【モニター応募】' + pen + '（' + birth + '）\n' + worry.slice(0, 120)); } catch (e) {}
+  return jsonOutput({ status: 'ok' });
+}
+
+/**
  * 会員ログイン（member_login）
  * @param {{memberNo:string, pin:string}} data
  */
@@ -238,6 +296,7 @@ function handleMemberLogin(data) {
     tellerName: cpText_(p['占い師名']),
     memberNo: cpText_(p['会員番号']),
     memberStatus: sel('会員ステータス'),
+    coupon: (p['クーポン残高'] && typeof p['クーポン残高'].number === 'number') ? p['クーポン残高'].number : 0,
     arts: multi('占術'),
     titles: multi('称号'),
     certs: multi('認定/テスト'),

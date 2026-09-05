@@ -1,0 +1,196 @@
+---
+import Layout from '../layouts/Layout.astro';
+import LineButton from '../components/LineButton.astro';
+import { getThemes } from '../lib/notion';
+import { SISTER_SITE_URL, SISTER_SITE_NAME } from '../consts';
+
+const base = import.meta.env.BASE_URL;
+const memberUrl = `${base.replace(/\/$/, '')}/member`;
+const monitorUrl = `${base.replace(/\/$/, '')}/monitor`;
+
+const fmt = (iso: string) => {
+  if (!iso) return '';
+  const d = new Date(iso);
+  return `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
+};
+
+const themes = await getThemes();
+const current = themes.find((t) => t.current) ?? themes[0];
+const past = themes.filter((t) => t !== current);
+---
+
+<Layout
+  title="今週の題材｜Fortune Labo"
+  description="Fortune Laboの一斉リーディング会のお題（今週の題材）と、過去の鑑定結果アーカイブ。会員は自分の読み解きを投稿できます。"
+>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section-title">今週の題材</h1>
+      <p class="section-lead">
+        みんなで同じお題を読み解く「一斉リーディング会」。<br />
+        会員のあなたは、自分の読み解きを投稿できます。
+      </p>
+
+      {
+        current ? (
+          <article class="theme-current">
+            <div class="theme-badge">今週のお題</div>
+            <h2 class="theme-title">{current.title}</h2>
+            {current.date && <p class="theme-date">{fmt(current.date)}</p>}
+            {current.desc && <p class="theme-desc">{current.desc}</p>}
+            <div class="theme-actions">
+              <a class="btn btn-primary" href={memberUrl}>会員ページで読み解きを投稿する →</a>
+              {current.youtube && (
+                <a class="btn btn-ghost" href={current.youtube} target="_blank" rel="noopener noreferrer">
+                  鑑定結果をYouTubeで見る ↗
+                </a>
+              )}
+            </div>
+            {current.answers.length > 0 && (
+              <div class="theme-answers">
+                <h3>みんなの読み解き（{current.answers.length}件）</h3>
+                <ul>
+                  {current.answers.map((a) => (
+                    <li class="answer">
+                      <p class="answer-name">✦ {a.penName}</p>
+                      <p class="answer-body">{a.content}</p>
+                    </li>
+                  ))}
+                </ul>
+              </div>
+            )}
+          </article>
+        ) : (
+          <p class="empty">現在のお題は準備中です。決まり次第このページでご案内します。</p>
+        )
+      }
+
+      <!-- 無料鑑定モニター募集 -->
+      <div class="monitor-cta">
+        <p class="monitor-title">🔮 無料鑑定モニター募集</p>
+        <p class="monitor-desc">
+          複数の占い師があなたを無料で鑑定します（抽選）。結果はYouTube・SNSで発表予定。
+        </p>
+        <a class="btn btn-primary" href={monitorUrl}>モニターに応募する →</a>
+      </div>
+
+      <!-- 過去のお題アーカイブ -->
+      {
+        past.length > 0 && (
+          <div class="archive">
+            <h2 class="archive-h">これまでのお題</h2>
+            {past.map((t) => (
+              <details class="past-theme">
+                <summary>
+                  <span class="past-title">{t.title}</span>
+                  {t.date && <span class="past-date">{fmt(t.date)}</span>}
+                </summary>
+                <div class="past-body">
+                  {t.desc && <p class="theme-desc">{t.desc}</p>}
+                  {t.youtube && (
+                    <a class="past-yt" href={t.youtube} target="_blank" rel="noopener noreferrer">
+                      鑑定結果をYouTubeで見る ↗
+                    </a>
+                  )}
+                  {t.answers.length > 0 ? (
+                    <ul class="past-answers">
+                      {t.answers.map((a) => (
+                        <li class="answer">
+                          <p class="answer-name">✦ {a.penName}</p>
+                          <p class="answer-body">{a.content}</p>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : (
+                    <p class="empty-small">公開された読み解きはまだありません。</p>
+                  )}
+                </div>
+              </details>
+            ))}
+          </div>
+        )
+      }
+
+      <!-- 鑑定を依頼したい方へ（Fortune Grace 導線） -->
+      <div class="grace-cta">
+        <p class="grace-title">鑑定を依頼したい方へ</p>
+        <p class="grace-desc">
+          気になる占い師が見つかったら、鑑定サイト「{SISTER_SITE_NAME}」からご依頼いただけます。
+        </p>
+        <div class="grace-actions">
+          <a class="btn btn-primary" href={SISTER_SITE_URL} target="_blank" rel="noopener noreferrer">
+            {SISTER_SITE_NAME}で鑑定を受ける ↗
+          </a>
+          <LineButton label="LINEで相談する" />
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .narrow { max-width: 760px; }
+  .empty { text-align: center; color: var(--color-text-muted); }
+
+  .theme-current {
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-top: 4px solid var(--color-primary);
+    border-radius: var(--radius);
+    padding: 1.8rem 1.6rem;
+  }
+  .theme-badge {
+    display: inline-block;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.78rem;
+    font-weight: 700;
+    padding: 0.2rem 0.8rem;
+    border-radius: 999px;
+    margin-bottom: 0.8rem;
+  }
+  .theme-title { font-size: 1.5rem; line-height: 1.4; }
+  .theme-date { color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.3rem; }
+  .theme-desc { color: var(--color-text-muted); line-height: 1.9; margin-top: 1rem; }
+  .theme-actions {
+    display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.5rem;
+  }
+  .theme-answers { margin-top: 2rem; padding-top: 1.4rem; border-top: 1px solid var(--color-border); }
+  .theme-answers h3 { font-size: 1.05rem; color: var(--color-primary-soft); margin-bottom: 1rem; }
+  .theme-answers ul, .past-answers { list-style: none; display: grid; gap: 0.9rem; }
+  .answer {
+    background: var(--color-bg-soft); border: 1px solid var(--color-border);
+    border-radius: 12px; padding: 0.9rem 1.1rem;
+  }
+  .answer-name { font-weight: 700; font-size: 0.9rem; color: var(--color-accent-soft); margin-bottom: 0.3rem; }
+  .answer-body { color: var(--color-text); font-size: 0.93rem; line-height: 1.8; white-space: pre-wrap; }
+
+  .monitor-cta, .grace-cta {
+    text-align: center; margin-top: 2.5rem;
+    background: var(--color-bg-soft); border: 1px solid var(--color-border);
+    border-radius: var(--radius); padding: 1.8rem 1.5rem;
+  }
+  .monitor-title, .grace-title { font-weight: 800; font-size: 1.1rem; color: var(--color-primary-soft); }
+  .monitor-desc, .grace-desc { color: var(--color-text-muted); font-size: 0.9rem; margin: 0.6rem 0 1.2rem; line-height: 1.7; }
+  .grace-actions { display: flex; flex-wrap: wrap; gap: 0.7rem; justify-content: center; }
+
+  .archive { margin-top: 3rem; }
+  .archive-h {
+    font-size: 1.2rem; color: var(--color-text-muted);
+    padding-bottom: 0.6rem; border-bottom: 2px solid var(--color-border); margin-bottom: 1rem;
+  }
+  .past-theme {
+    border: 1px solid var(--color-border); border-radius: 12px;
+    background: var(--color-surface); margin-bottom: 0.7rem;
+  }
+  .past-theme > summary {
+    cursor: pointer; list-style: none; padding: 0.9rem 1.1rem;
+    display: flex; justify-content: space-between; align-items: baseline; gap: 0.8rem;
+  }
+  .past-theme > summary::-webkit-details-marker { display: none; }
+  .past-title { font-weight: 700; }
+  .past-date { font-size: 0.8rem; color: var(--color-text-muted); white-space: nowrap; }
+  .past-body { padding: 0 1.1rem 1.1rem; }
+  .past-yt { display: inline-block; margin: 0.4rem 0 0.9rem; font-weight: 700; color: var(--color-primary-soft); }
+  .empty-small { color: var(--color-text-muted); font-size: 0.88rem; }
+</style>

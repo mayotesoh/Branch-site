@@ -1,0 +1,148 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { GAS_URL } from '../consts';
+
+const PREFS = [
+  '北海道','青森県','岩手県','宮城県','秋田県','山形県','福島県','茨城県','栃木県','群馬県','埼玉県','千葉県','東京都','神奈川県','新潟県','富山県','石川県','福井県','山梨県','長野県','岐阜県','静岡県','愛知県','三重県','滋賀県','京都府','大阪府','兵庫県','奈良県','和歌山県','鳥取県','島根県','岡山県','広島県','山口県','徳島県','香川県','愛媛県','高知県','福岡県','佐賀県','長崎県','熊本県','大分県','宮崎県','鹿児島県','沖縄県','海外・その他',
+];
+---
+
+<Layout
+  title="無料鑑定モニター応募｜Fortune Labo"
+  description="複数の占い師が無料であなたを鑑定します（抽選）。鑑定結果はYouTube・SNSで発表予定です。"
+>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="page-title">無料鑑定モニター応募</h1>
+      <p class="page-lead">
+        複数の占い師があなたを無料で鑑定します（抽選制）。<br />
+        鑑定結果は <strong>YouTube・SNSで発表</strong> されます。内容がすべて公開されてよい方のみご応募ください。
+      </p>
+
+      <div id="done" class="done-box" hidden>
+        <p class="done-title">✓ 応募を受け付けました</p>
+        <p>ご応募ありがとうございます。抽選のうえ、当選された方には公式LINE等でご連絡します。</p>
+      </div>
+
+      <form id="monitor-form" class="form" novalidate>
+        <label class="field">
+          <span class="field-label">ペンネーム（呼び名）<em>必須</em></span>
+          <input id="penName" type="text" required placeholder="例：さくら" />
+        </label>
+        <label class="field">
+          <span class="field-label">生年月日<em>必須</em></span>
+          <input id="birth" type="text" required placeholder="例：1993年4月5日" />
+        </label>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">性別</span>
+            <select id="gender">
+              <option value="">選択しない</option>
+              <option>女性</option>
+              <option>男性</option>
+              <option>その他・未回答</option>
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">年齢</span>
+            <input id="age" type="text" inputmode="numeric" placeholder="例：32" />
+          </label>
+        </div>
+        <div class="field-row">
+          <label class="field">
+            <span class="field-label">都道府県</span>
+            <select id="pref">
+              <option value="">選択しない</option>
+              {PREFS.map((p) => <option>{p}</option>)}
+            </select>
+          </label>
+          <label class="field">
+            <span class="field-label">出生時間（分かれば）</span>
+            <input id="birthtime" type="text" placeholder="例：14:30 / 不明" />
+          </label>
+        </div>
+        <label class="field">
+          <span class="field-label">お悩み・背景<em>必須</em></span>
+          <textarea id="worry" rows="5" required
+            placeholder="例：転職を迷っています。現職に不満はないが挑戦したい気持ちも…（特定されやすい個人情報は書かないでください）"></textarea>
+        </label>
+        <label class="consent">
+          <input id="consent" type="checkbox" required />
+          <span>鑑定内容・応募情報が <strong>YouTube・SNSで公開されること</strong> に同意します（必須）</span>
+        </label>
+        <button id="submit-btn" type="submit" class="btn btn-primary btn-block">応募する</button>
+        <p id="form-msg" class="form-msg" role="alert" aria-live="polite"></p>
+        <p class="note">※ 個人が特定されるような固有名詞は書かないでください。追加のヒアリングを行う場合があります。</p>
+      </form>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ GAS_URL }} is:inline>
+  const form = document.getElementById('monitor-form');
+  const msg = document.getElementById('form-msg');
+  const btn = document.getElementById('submit-btn');
+  const done = document.getElementById('done');
+  const val = (id) => document.getElementById(id).value.trim();
+
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const penName = val('penName'), birth = val('birth'), worry = val('worry');
+    const consent = document.getElementById('consent').checked;
+    if (!penName || !birth || !worry) { msg.textContent = '必須項目を入力してください。'; msg.className = 'form-msg error'; return; }
+    if (!consent) { msg.textContent = '公開への同意にチェックしてください。'; msg.className = 'form-msg error'; return; }
+    btn.disabled = true; btn.textContent = '送信中…'; msg.textContent = '';
+    try {
+      const res = await fetch(GAS_URL, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({
+          action: 'monitor_apply',
+          penName, birth, worry,
+          gender: val('gender'), age: val('age'), pref: val('pref'), birthtime: val('birthtime'),
+          consent: true,
+        }),
+      });
+      const data = await res.json();
+      if (data.status === 'ok') {
+        form.hidden = true; done.hidden = false;
+        done.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      } else {
+        msg.textContent = data.message || '送信できませんでした。'; msg.className = 'form-msg error';
+        btn.disabled = false; btn.textContent = '応募する';
+      }
+    } catch (err) {
+      msg.textContent = '通信に失敗しました。時間をおいて再度お試しください。'; msg.className = 'form-msg error';
+      btn.disabled = false; btn.textContent = '応募する';
+    }
+  });
+</script>
+
+<style>
+  .narrow { max-width: 640px; }
+  .page-title { font-size: clamp(1.6rem, 5vw, 2.3rem); margin-bottom: 1rem; }
+  .page-lead { color: var(--color-text-muted); line-height: 1.9; margin-bottom: 2rem; }
+  .form { display: grid; gap: 1.1rem; }
+  .field { display: grid; gap: 0.4rem; }
+  .field-row { display: grid; grid-template-columns: 1fr 1fr; gap: 1.1rem; }
+  .field-label { font-weight: 700; font-size: 0.9rem; }
+  .field-label em { color: #d33; font-style: normal; font-size: 0.78rem; margin-left: 0.4rem; }
+  .field input, .field select, .field textarea {
+    width: 100%; padding: 0.7rem 0.9rem; border: 2px solid var(--color-border);
+    border-radius: 10px; font-size: 1rem; background: var(--color-bg); color: var(--color-text);
+    font-family: inherit;
+  }
+  .field input:focus, .field select:focus, .field textarea:focus { outline: none; border-color: var(--color-primary); }
+  .consent { display: flex; gap: 0.6rem; align-items: flex-start; font-size: 0.9rem; color: var(--color-text-muted); line-height: 1.7; }
+  .consent input { margin-top: 0.25rem; width: 18px; height: 18px; flex-shrink: 0; }
+  .btn-block { width: 100%; }
+  .form-msg { text-align: center; font-size: 0.9rem; min-height: 1.2em; }
+  .form-msg.error { color: #d33; }
+  .note { color: var(--color-text-muted); font-size: 0.82rem; line-height: 1.7; }
+  .done-box {
+    background: var(--color-bg-soft); border: 1px solid var(--color-primary);
+    border-radius: var(--radius); padding: 1.8rem; text-align: center; color: var(--color-text-muted); line-height: 1.8;
+  }
+  .done-title { font-weight: 800; color: var(--color-primary-soft); font-size: 1.15rem; margin-bottom: 0.6rem; }
+  @media (max-width: 520px) { .field-row { grid-template-columns: 1fr; } }
+</style>

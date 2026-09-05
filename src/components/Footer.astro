@@ -1,5 +1,5 @@
 ---
-import { LINE_URL, SISTER_SITE_URL, SISTER_SITE_NAME, SISTER_SITE_DESC, SITE_REQUEST_URL } from '../consts';
+import { LINE_URL, SISTER_SITE_URL, SISTER_SITE_NAME, SISTER_SITE_DESC, SITE_REQUEST_URL, YOUTUBE_LABO_URL, YOUTUBE_GRACE_URL } from '../consts';
 const year = new Date().getFullYear();
 const base = import.meta.env.BASE_URL;
 ---
@@ -16,6 +16,12 @@ const base = import.meta.env.BASE_URL;
       <a href={`${base.replace(/\/$/, '')}/join`}>参加する</a>
       <a href={`${base.replace(/\/$/, '')}/company`}>運営元情報</a>
       <a href={LINE_URL} target="_blank" rel="noopener noreferrer">LINEで予約・相談</a>
+      {YOUTUBE_LABO_URL && (
+        <a href={YOUTUBE_LABO_URL} target="_blank" rel="noopener noreferrer">YouTube（占い師向け）↗</a>
+      )}
+      {YOUTUBE_GRACE_URL && (
+        <a href={YOUTUBE_GRACE_URL} target="_blank" rel="noopener noreferrer">YouTube（鑑定・お客さま向け）↗</a>
+      )}
       <a
         class="footer-sister"
         href={SISTER_SITE_URL}

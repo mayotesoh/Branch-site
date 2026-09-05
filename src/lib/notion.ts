@@ -29,6 +29,8 @@ export const COURSE_DB = '9e653e0af59e47ebb3c1c9d443339e48';
 export const INSTA_DB = '3a776a170aae818e8b00ea3294ee042f';
 export const VOICE_DB = '3a776a170aae81e88abbd889d401e589';
 export const EVENT_DB = '3a776a170aae814d8066e4c4161e9961';
+export const THEME_DB = '3d276a170aae81c2a286d911351cf3dc';
+export const THEME_ANSWER_DB = '3d276a170aae81c28f3acf6a1b4f0eb8';
 
 const token =
   (import.meta.env as any).NOTION_TOKEN ?? process.env.NOTION_TOKEN;
@@ -391,6 +393,67 @@ export function getEvents(): Promise<EventItem[]> {
     })();
   }
   return _events;
+}
+
+// ---- 今週の題材（一斉リーディング会のお題）＋会員の鑑定投稿 ----
+export interface ThemeAnswer {
+  penName: string;
+  content: string;
+  date: string;
+}
+export interface Theme {
+  pageId: string;
+  title: string;
+  desc: string;
+  current: boolean; // 今週
+  date: string;
+  youtube: string;
+  answers: ThemeAnswer[]; // 公開可の回答のみ
+}
+
+let _themes: Promise<Theme[]> | null = null;
+
+/** お題一覧（公開のみ・日付降順）。各お題に公開可の回答をぶら下げる */
+export function getThemes(): Promise<Theme[]> {
+  if (!_themes) {
+    _themes = (async () => {
+      const rows = await queryAll(THEME_DB, {
+        filter: { property: '公開', checkbox: { equals: true } },
+        sorts: [{ property: '日付', direction: 'descending' }],
+      });
+      // 公開可の回答をまとめて取得し、お題ごとに束ねる
+      const ans = await queryAll(THEME_ANSWER_DB, {
+        filter: { property: '公開可', checkbox: { equals: true } },
+        sorts: [{ property: '投稿日', direction: 'ascending' }],
+      });
+      const byTheme = new Map<string, ThemeAnswer[]>();
+      for (const a of ans) {
+        const p = a.properties;
+        const tid = p['お題']?.relation?.[0]?.id;
+        if (!tid) continue;
+        const list = byTheme.get(tid) ?? [];
+        list.push({
+          penName: pText(p['ペンネーム']) || '匿名',
+          content: pText(p['鑑定内容']),
+          date: pDate(p['投稿日']),
+        });
+        byTheme.set(tid, list);
+      }
+      return rows.map((r) => {
+        const p = r.properties;
+        return {
+          pageId: r.id,
+          title: pText(p['題材']),
+          desc: pText(p['説明']),
+          current: pCheckbox(p['今週']),
+          date: pDate(p['日付']),
+          youtube: p['YouTubeURL']?.url ?? '',
+          answers: byTheme.get(r.id) ?? [],
+        } as Theme;
+      });
+    })();
+  }
+  return _themes;
 }
 
 // ---- Instagram 埋め込み投稿 ----

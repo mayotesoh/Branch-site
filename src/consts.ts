@@ -34,6 +34,14 @@ export const PAYJP_PUBLIC_KEY = 'pk_test_58c51cb25eec8a844a85bdf8';
 /** 公式LINE 友だち追加・予約・相談リンク */
 export const LINE_URL = 'https://lin.ee/SZZ4UJj';
 
+/**
+ * YouTubeチャンネル（空文字ならリンク非表示）
+ * LABO＝占い師向け（フォーチュンラボ）、GRACE＝お客さま向け（フォーチュングレイス）
+ * チャンネルのURL（https://www.youtube.com/@… など）を設定してください。
+ */
+export const YOUTUBE_LABO_URL = '';
+export const YOUTUBE_GRACE_URL = '';
+
 /** LINEボタンの既定ラベル */
 export const LINE_LABEL = 'LINEで予約・相談';
 
