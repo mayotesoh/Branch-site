@@ -19,6 +19,112 @@ const MP_PART_DB = '3a776a17-0aae-8123-89ea-dbd65a7295e7';
 const MP_ANSWER_DB = '3d276a17-0aae-81c2-8f3a-cf6a1b4f0eb8';
 // モニター応募DB
 const MP_MONITOR_DB = '3d276a17-0aae-8151-9fb1-cf73d0219950';
+// クイズDB / クイズ結果DB（週次スコア）
+const MP_QUIZ_DB = '3d276a17-0aae-819f-b797-f0aad61dfac1';
+const MP_QUIZRES_DB = '3d276a17-0aae-8192-ac37-da9927a78fb9';
+const MP_QUIZ_PASS = 0.8; // 合格ライン（80%）
+
+/** 今週の月曜日（yyyy-MM-dd）を週キーにする */
+function mpWeekKey_() {
+  const now = new Date();
+  const day = (now.getDay() + 6) % 7; // 月曜=0
+  const mon = new Date(now);
+  mon.setDate(now.getDate() - day);
+  return Utilities.formatDate(mon, 'Asia/Tokyo', 'yyyy-MM-dd');
+}
+
+/** 会員の今週のクイズスコア（占術別）を返す */
+function mpQuizScores_(memberNo) {
+  try {
+    const week = mpWeekKey_();
+    const b = cpApi_('databases/' + MP_QUIZRES_DB + '/query', 'post', {
+      page_size: 50,
+      filter: { and: [
+        { property: '会員番号', rich_text: { equals: memberNo } },
+        { property: '週', rich_text: { equals: week } },
+      ] },
+    });
+    return (b.results || []).map(function (r) {
+      const p = r.properties;
+      const num = function (k) { return (p[k] && typeof p[k].number === 'number') ? p[k].number : 0; };
+      return {
+        art: (p['占術'] && p['占術'].select) ? p['占術'].select.name : '',
+        rate: Math.round(num('正答率') * 100),
+        correct: num('正答数'),
+        total: num('出題数'),
+        passed: !!(p['合格'] && p['合格'].checkbox),
+      };
+    });
+  } catch (e) { return []; }
+}
+
+/**
+ * クイズ採点（quiz_grade）：占術のクイズを採点し、今週のベストを保存
+ * @param {{memberNo,pin,art, answers:{[qId]:'1'|'2'|'3'|'4'}}} data
+ */
+function handleQuizGrade(data) {
+  const art = String(data.art || '').trim();
+  const answers = data.answers || {};
+  if (!art) throw new Error('占術が指定されていません。');
+  const hit = mpFindMember_(data.memberNo, data.pin);
+
+  const body = cpApi_('databases/' + MP_QUIZ_DB + '/query', 'post', {
+    page_size: 100,
+    filter: { and: [
+      { property: '占術', select: { equals: art } },
+      { property: '公開', checkbox: { equals: true } },
+    ] },
+    sorts: [{ property: '表示順', direction: 'ascending' }],
+  });
+  const results = [];
+  let correct = 0, total = 0;
+  (body.results || []).forEach(function (r) {
+    const p = r.properties;
+    if (!Object.prototype.hasOwnProperty.call(answers, r.id)) return;
+    total++;
+    const ans = (p['正解'] && p['正解'].select) ? p['正解'].select.name : '';
+    const ok = String(answers[r.id]) === ans;
+    if (ok) correct++;
+    results.push({ id: r.id, correct: ok, answer: ans, explain: cpText_(p['解説']) });
+  });
+  if (total === 0) throw new Error('回答がありません。');
+  const rate = correct / total;
+  const passed = rate >= MP_QUIZ_PASS;
+
+  // 今週のベストを保存（既存があり今回が下回るなら更新しない）
+  const week = mpWeekKey_();
+  const no = cpText_(hit.properties['会員番号']);
+  const props = {
+    '正答数': { number: correct }, '出題数': { number: total },
+    '正答率': { number: rate }, '合格': { checkbox: passed },
+    '更新日': { date: { start: cpToday_() } },
+  };
+  const found = cpApi_('databases/' + MP_QUIZRES_DB + '/query', 'post', {
+    page_size: 1,
+    filter: { and: [
+      { property: '会員番号', rich_text: { equals: no } },
+      { property: '週', rich_text: { equals: week } },
+      { property: '占術', select: { equals: art } },
+    ] },
+  });
+  if (found.results && found.results.length) {
+    const ex = found.results[0];
+    const exRate = (ex.properties['正答率'] && typeof ex.properties['正答率'].number === 'number') ? ex.properties['正答率'].number : 0;
+    if (rate >= exRate) cpApi_('pages/' + ex.id, 'patch', { properties: props });
+  } else {
+    cpApi_('pages', 'post', {
+      parent: { database_id: MP_QUIZRES_DB },
+      properties: Object.assign({
+        '記録': { title: [{ text: { content: no + ' ' + week + ' ' + art } }] },
+        '会員': { relation: [{ id: hit.id }] },
+        '会員番号': { rich_text: [{ text: { content: no } }] },
+        '週': { rich_text: [{ text: { content: week } }] },
+        '占術': { select: { name: art } },
+      }, props),
+    });
+  }
+  return jsonOutput({ status: 'ok', correct: correct, total: total, rate: Math.round(rate * 100), passed: passed, results: results, week: week });
+}
 
 /** その会員の参加記録（新しい順）。イベント名は関連ページから取得 */
 function mpStamps_(memberPageId) {
@@ -302,6 +408,8 @@ function handleMemberLogin(data) {
     certs: multi('認定/テスト'),
     courses: courses,
     stamps: mpStamps_(hit.id),
+    quizWeek: mpWeekKey_(),
+    quizScores: mpQuizScores_(cpText_(p['会員番号']) || no),
     evaluation: mpLatestEval_(cpText_(p['会員番号']) || no),
   });
 }

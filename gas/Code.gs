@@ -84,6 +84,10 @@ function doPost(e) {
     if (data && data.action === 'monitor_apply') {
       return handleMonitorApply(data); // MemberPortal.gs
     }
+    // (L) 占いクイズ採点（週次スコア保存）
+    if (data && data.action === 'quiz_grade') {
+      return handleQuizGrade(data); // MemberPortal.gs
+    }
 
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);

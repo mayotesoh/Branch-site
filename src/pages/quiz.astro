@@ -1,0 +1,233 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { GAS_URL } from '../consts';
+import { getQuiz } from '../lib/notion';
+
+const base = import.meta.env.BASE_URL;
+const memberUrl = `${base.replace(/\/$/, '')}/member`;
+const quizData = await getQuiz();
+---
+
+<Layout
+  title="占いクイズ｜Fortune Labo"
+  description="占い師の基礎や占術別の知識を毎週チャレンジ。正答率スコアが記録され、合格すると称号がもらえます。"
+>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section-title">占いクイズ</h1>
+      <p class="section-lead">
+        占術別に毎週チャレンジ。正答率が記録され、<strong>80%以上で「今週の合格」</strong>の称号がもらえます。
+      </p>
+
+      <!-- 未ログイン -->
+      <div id="needLogin" class="panel" hidden>
+        <p>クイズは会員専用です。まず会員ページでログインしてください。</p>
+        <a class="btn btn-primary" href={memberUrl}>会員ページでログイン →</a>
+      </div>
+
+      <!-- 今週のスコア -->
+      <div id="scoreBox" class="score-box" hidden>
+        <p class="score-title">今週のスコア</p>
+        <div id="scoreList" class="score-list"></div>
+      </div>
+
+      <!-- 占術選択 -->
+      <div id="quizMain" hidden>
+        {
+          quizData.length === 0 ? (
+            <p class="empty">クイズは準備中です。</p>
+          ) : (
+            <>
+              <p class="pick-lead">挑戦する占術を選んでください。</p>
+              <div class="art-picker" id="artPicker">
+                {quizData.map((qa) => (
+                  <button class="chip" type="button" data-art={qa.art}>
+                    {qa.art}（{qa.questions.length}問）
+                  </button>
+                ))}
+              </div>
+            </>
+          )
+        }
+        <div id="quizArea"></div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ GAS_URL, quizData }} is:inline>
+  const esc = (s) =>
+    String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  const needLogin = document.getElementById('needLogin');
+  const quizMain = document.getElementById('quizMain');
+  const scoreBox = document.getElementById('scoreBox');
+  const scoreList = document.getElementById('scoreList');
+  const artPicker = document.getElementById('artPicker');
+  const quizArea = document.getElementById('quizArea');
+
+  let creds = null;
+  try { const s = sessionStorage.getItem('fl_cred'); if (s) creds = JSON.parse(s); } catch (e) {}
+
+  if (!creds) {
+    needLogin.hidden = false;
+  } else {
+    quizMain.hidden = false;
+    loadScores();
+  }
+
+  const byArt = {};
+  (quizData || []).forEach((qa) => (byArt[qa.art] = qa.questions));
+
+  async function postGas(payload) {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  }
+
+  async function loadScores() {
+    try {
+      const d = await postGas({ action: 'member_login', memberNo: creds.no, pin: creds.pin });
+      if (d.status !== 'ok') return;
+      const scores = d.quizScores || [];
+      if (!scores.length) { scoreBox.hidden = true; return; }
+      scoreBox.hidden = false;
+      scoreList.innerHTML = scores.map((s) =>
+        `<span class="score-chip ${s.passed ? 'passed' : ''}">${esc(s.art)} ${esc(s.rate)}%`
+        + `${s.passed ? ' 🎓' : ''}</span>`).join('');
+    } catch (e) {}
+  }
+
+  // 占術選択→出題
+  if (artPicker) {
+    artPicker.addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip');
+      if (!btn) return;
+      const art = btn.dataset.art;
+      Array.from(artPicker.querySelectorAll('.chip')).forEach((c) => c.classList.toggle('is-active', c === btn));
+      renderQuestions(art);
+    });
+  }
+
+  function renderQuestions(art) {
+    const qs = byArt[art] || [];
+    const body = qs.map((q, i) => {
+      const opts = q.choices.map((c, ci) =>
+        `<label class="opt"><input type="radio" name="q_${q.id}" value="${ci + 1}" /> <span>${esc(c)}</span></label>`).join('');
+      return `<div class="qcard" data-qid="${q.id}"><p class="qnum">Q${i + 1}</p>`
+        + `<p class="qtext">${esc(q.q)}</p><div class="opts">${opts}</div>`
+        + `<p class="qresult" data-qid="${q.id}"></p></div>`;
+    }).join('');
+    quizArea.innerHTML = `<div class="quiz-set"><h2 class="quiz-h">${esc(art)}</h2>${body}`
+      + `<button class="btn btn-primary btn-block quiz-grade" data-art="${esc(art)}">採点する</button>`
+      + `<p class="grade-msg" id="gradeMsg" aria-live="polite"></p>`
+      + `<div class="grade-result" id="gradeResult"></div></div>`;
+    quizArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
+
+  // 採点
+  quizArea.addEventListener('click', async (e) => {
+    const btn = e.target.closest('.quiz-grade');
+    if (!btn) return;
+    const art = btn.dataset.art;
+    const msg = document.getElementById('gradeMsg');
+    const answers = {};
+    let unanswered = 0;
+    (byArt[art] || []).forEach((q) => {
+      const sel = quizArea.querySelector(`input[name="q_${q.id}"]:checked`);
+      if (sel) answers[q.id] = sel.value; else unanswered++;
+    });
+    if (Object.keys(answers).length === 0) { msg.textContent = '回答を選んでください。'; msg.className = 'grade-msg error'; return; }
+    btn.disabled = true; btn.textContent = '採点中…'; msg.textContent = '';
+    try {
+      const r = await postGas({ action: 'quiz_grade', memberNo: creds.no, pin: creds.pin, art, answers });
+      if (r.status !== 'ok') { msg.textContent = r.message || '採点できませんでした。'; msg.className = 'grade-msg error'; btn.disabled = false; btn.textContent = '採点する'; return; }
+      // 各問に○×＋解説
+      (r.results || []).forEach((res) => {
+        const el = quizArea.querySelector(`.qresult[data-qid="${res.id}"]`);
+        const card = quizArea.querySelector(`.qcard[data-qid="${res.id}"]`);
+        if (card) card.classList.add(res.correct ? 'is-correct' : 'is-wrong');
+        if (el) el.innerHTML = `${res.correct ? '⭕ 正解' : '❌ 不正解（正解：' + esc(res.answer) + '）'}`
+          + (res.explain ? `<span class="qexp">${esc(res.explain)}</span>` : '');
+      });
+      const rank = r.passed ? '🎓 今週の合格！' : '';
+      document.getElementById('gradeResult').innerHTML =
+        `<div class="score-final ${r.passed ? 'passed' : ''}">`
+        + `正答 ${r.correct} / ${r.total}　正答率 <strong>${r.rate}%</strong> ${rank}</div>`
+        + (unanswered ? `<p class="grade-note">※ 未回答 ${unanswered}問は採点対象外です。</p>` : '');
+      btn.textContent = 'もう一度採点';
+      btn.disabled = false;
+      loadScores();
+    } catch (err) { msg.textContent = '通信に失敗しました。'; msg.className = 'grade-msg error'; btn.disabled = false; btn.textContent = '採点する'; }
+  });
+</script>
+
+<style>
+  .narrow { max-width: 680px; }
+  .empty { color: var(--color-text-muted); text-align: center; }
+  .panel {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: var(--radius); padding: 1.8rem; text-align: center;
+  }
+  .panel p { color: var(--color-text-muted); margin-bottom: 1.2rem; }
+
+  .score-box {
+    background: var(--color-bg-soft); border: 1px solid var(--color-border);
+    border-radius: var(--radius); padding: 1.1rem 1.3rem; margin-bottom: 1.8rem;
+  }
+  .score-title { font-weight: 800; font-size: 0.9rem; color: var(--color-primary-soft); margin-bottom: 0.6rem; }
+  .score-list { display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .score-chip {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 999px; padding: 0.25rem 0.8rem; font-size: 0.82rem; font-weight: 700;
+  }
+  .score-chip.passed { border-color: var(--color-accent); color: var(--color-accent-soft); }
+
+  .pick-lead { color: var(--color-text-muted); margin-bottom: 0.8rem; }
+  .art-picker { display: flex; flex-wrap: wrap; gap: 0.6rem; margin-bottom: 1.5rem; }
+  .chip {
+    border: 1px solid var(--color-border); background: var(--color-surface);
+    color: var(--color-text-muted); border-radius: 999px; padding: 0.45rem 1.05rem;
+    font-size: 0.88rem; font-weight: 700; cursor: pointer;
+    transition: background 0.15s, color 0.15s, border-color 0.15s;
+  }
+  .chip:hover { border-color: var(--color-primary); color: var(--color-primary-soft); }
+  .chip.is-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
+
+  .quiz-set { margin-top: 1rem; }
+  .quiz-h { font-size: 1.2rem; color: var(--color-primary-soft); margin-bottom: 1rem; }
+  .qcard {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-radius: 14px; padding: 1.1rem 1.2rem; margin-bottom: 0.9rem;
+  }
+  .qcard.is-correct { border-color: #06a047; }
+  .qcard.is-wrong { border-color: #d33; }
+  .qnum { font-size: 0.78rem; font-weight: 800; color: var(--color-accent-soft); }
+  .qtext { font-weight: 700; line-height: 1.6; margin: 0.3rem 0 0.8rem; }
+  .opts { display: grid; gap: 0.5rem; }
+  .opt {
+    display: flex; gap: 0.6rem; align-items: flex-start;
+    padding: 0.6rem 0.8rem; border: 1px solid var(--color-border); border-radius: 10px;
+    cursor: pointer; font-size: 0.93rem; line-height: 1.6;
+  }
+  .opt:hover { border-color: var(--color-primary); }
+  .opt input { margin-top: 0.25rem; }
+  .qresult { margin-top: 0.6rem; font-size: 0.88rem; font-weight: 700; }
+  .qresult:empty { margin-top: 0; }
+  .qexp { display: block; font-weight: 400; color: var(--color-text-muted); font-size: 0.86rem; line-height: 1.8; margin-top: 0.3rem; }
+  .btn-block { width: 100%; margin-top: 0.5rem; }
+  .grade-msg { text-align: center; font-size: 0.88rem; min-height: 1em; }
+  .grade-msg.error { color: #d33; }
+  .score-final {
+    text-align: center; margin-top: 1rem; padding: 1rem;
+    background: var(--color-bg-soft); border: 1px solid var(--color-border); border-radius: 12px;
+    font-size: 1.05rem;
+  }
+  .score-final strong { color: var(--color-primary-soft); font-size: 1.3rem; }
+  .score-final.passed { border-color: var(--color-accent); }
+  .grade-note { text-align: center; color: var(--color-text-muted); font-size: 0.82rem; margin-top: 0.5rem; }
+</style>

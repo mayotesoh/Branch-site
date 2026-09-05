@@ -31,6 +31,7 @@ export const VOICE_DB = '3a776a170aae81e88abbd889d401e589';
 export const EVENT_DB = '3a776a170aae814d8066e4c4161e9961';
 export const THEME_DB = '3d276a170aae81c2a286d911351cf3dc';
 export const THEME_ANSWER_DB = '3d276a170aae81c28f3acf6a1b4f0eb8';
+export const QUIZ_DB = '3d276a170aae819fb797f0aad61dfac1';
 
 const token =
   (import.meta.env as any).NOTION_TOKEN ?? process.env.NOTION_TOKEN;
@@ -454,6 +455,46 @@ export function getThemes(): Promise<Theme[]> {
     })();
   }
   return _themes;
+}
+
+// ---- クイズ（占術別）※正解・解説はクライアントに出さない（採点はGAS） ----
+export interface QuizQuestion {
+  id: string;
+  q: string;
+  choices: string[];
+}
+export interface QuizArt {
+  art: string;
+  questions: QuizQuestion[];
+}
+
+let _quiz: Promise<QuizArt[]> | null = null;
+
+/** 公開中のクイズを占術別にまとめて返す（正解・解説は含めない） */
+export function getQuiz(): Promise<QuizArt[]> {
+  if (!_quiz) {
+    _quiz = (async () => {
+      const rows = await queryAll(QUIZ_DB, {
+        filter: { property: '公開', checkbox: { equals: true } },
+        sorts: [{ property: '表示順', direction: 'ascending' }],
+      });
+      const byArt = new Map<string, QuizQuestion[]>();
+      for (const r of rows) {
+        const p = r.properties;
+        const art = pSelect(p['占術']) || 'その他';
+        const choices = [
+          pText(p['選択肢1']), pText(p['選択肢2']),
+          pText(p['選択肢3']), pText(p['選択肢4']),
+        ].filter((c) => c !== '');
+        if (!pText(p['問題']) || choices.length < 2) continue;
+        const list = byArt.get(art) ?? [];
+        list.push({ id: r.id, q: pText(p['問題']), choices });
+        byArt.set(art, list);
+      }
+      return [...byArt.entries()].map(([art, questions]) => ({ art, questions }));
+    })();
+  }
+  return _quiz;
 }
 
 // ---- Instagram 埋め込み投稿 ----

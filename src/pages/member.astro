@@ -21,6 +21,9 @@ const memberEvents = (await getEvents())
 const _themes = await getThemes();
 const _cur = _themes.find((t) => t.current) ?? _themes[0] ?? null;
 const memberTheme = _cur ? { id: _cur.pageId, title: _cur.title, desc: _cur.desc } : null;
+
+const _base = import.meta.env.BASE_URL;
+const quizUrl = `${_base.replace(/\/$/, '')}/quiz`;
 ---
 
 <Layout
@@ -80,7 +83,7 @@ const memberTheme = _cur ? { id: _cur.pageId, title: _cur.title, desc: _cur.desc
   </section>
 </Layout>
 
-<script define:vars={{ GAS_URL, memberEvents, memberTheme, SISTER_SITE_URL, SISTER_SITE_NAME }} is:inline>
+<script define:vars={{ GAS_URL, memberEvents, memberTheme, quizUrl, SISTER_SITE_URL, SISTER_SITE_NAME }} is:inline>
   const loginBox = document.getElementById('login');
   const dash = document.getElementById('dash');
   const form = document.getElementById('login-form');
@@ -274,6 +277,11 @@ const memberTheme = _cur ? { id: _cur.pageId, title: _cur.title, desc: _cur.desc
       ${eventsBlock(d.stamps)}
 
       ${themeBlock()}
+
+      <a class="block quiz-cta" href="${quizUrl}">
+        <span>🧠 占いクイズに挑戦</span>
+        <span class="quiz-cta-sub">占術別・毎週チャレンジ／80%で合格 →</span>
+      </a>
 
       <div class="block">
         <h2 class="block-h">対応占術</h2>
@@ -647,6 +655,17 @@ const memberTheme = _cur ? { id: _cur.pageId, title: _cur.title, desc: _cur.desc
   #dash .theme-msg { font-size: 0.82rem; margin-top: 0.5rem; min-height: 1em; }
   #dash .theme-msg.ok { color: #06a047; }
   #dash .theme-msg.error { color: #d33; }
+
+  /* クイズ導線 */
+  #dash .quiz-cta {
+    display: flex; flex-direction: column; gap: 0.2rem;
+    background: linear-gradient(135deg, var(--color-primary), var(--color-primary-soft));
+    color: #fff; border-radius: 14px; padding: 1.1rem 1.3rem;
+    transition: transform 0.15s ease;
+  }
+  #dash .quiz-cta:hover { transform: translateY(-2px); color: #fff; }
+  #dash .quiz-cta > span:first-child { font-weight: 800; font-size: 1.05rem; }
+  #dash .quiz-cta-sub { font-size: 0.82rem; opacity: 0.9; }
   #dash .course-list { margin: 0; padding-left: 1.2rem; display: grid; gap: 0.35rem; color: var(--color-text-muted); font-size: 0.92rem; }
 
   /* 鑑定ロープレ評価（パラメータ） */
