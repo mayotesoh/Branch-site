@@ -585,10 +585,10 @@ const quizUrl = `${_base.replace(/\/$/, '')}/quiz`;
     font-size: 0.8rem; font-weight: 700; white-space: nowrap;
   }
   #dash .mev-toggle-txt::after { content: '閉じる'; }
-  #dash .mev-block:not([open]) .mev-toggle-txt::after { content: '開く'; }
+  #dash details:not([open]) .mev-toggle-txt::after { content: '開く'; }
   #dash .mev-caret { transition: transform 0.2s ease; }
-  #dash .mev-block:not([open]) .mev-caret { transform: rotate(-90deg); }
-  #dash .mev-block[open] .mev-summary {
+  #dash details:not([open]) .mev-caret { transform: rotate(-90deg); }
+  #dash details[open] > .mev-summary {
     border-bottom-left-radius: 0; border-bottom-right-radius: 0;
     margin-bottom: 0.9rem;
   }
