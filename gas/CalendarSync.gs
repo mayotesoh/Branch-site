@@ -19,6 +19,20 @@
 const CAL_EVENT_DB = '3a776a170aae814d8066e4c4161e9961'; // Fortune Labo イベントDB
 const CAL_NAME = 'Fortune Labo イベント';
 
+/** ページのタイトル（title型プロパティ）を項目名に依存せず取り出す */
+function calTitle_(props) {
+  // まず「イベント名」を優先、無ければ title 型のプロパティを探す
+  if (props['イベント名'] && props['イベント名'].title) {
+    return (props['イベント名'].title || []).map(function (x) { return x.plain_text; }).join('');
+  }
+  for (const k in props) {
+    if (props[k] && props[k].type === 'title') {
+      return (props[k].title || []).map(function (x) { return x.plain_text; }).join('');
+    }
+  }
+  return '';
+}
+
 /** 同期先カレンダーを取得（無ければ作成） */
 function calGet_() {
   const cals = CalendarApp.getCalendarsByName(CAL_NAME);
@@ -51,7 +65,7 @@ function syncEventsToCalendar() {
     const p = r.properties;
     const d = p['開催日'] && p['開催日'].date;
     if (!d || !d.start) return; // 日付なしはスキップ
-    const name = cpText_(p['イベント名']) || 'イベント';
+    const name = calTitle_(p) || 'イベント';
     const type = (p['種別'] && p['種別'].select) ? p['種別'].select.name : '';
     const memo = cpText_(p['メモ']);
     const url = (p['案内URL'] && p['案内URL'].url) ? p['案内URL'].url : '';
