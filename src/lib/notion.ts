@@ -156,24 +156,28 @@ export function getPosts(): Promise<PostMeta[]> {
         filter: { property: '公開状態', select: { equals: '公開' } },
         sorts: [{ property: '公開日', direction: 'descending' }],
       });
-      return rows.map((r) => {
-        const p = r.properties;
-        const authorPage = pRelIds(p['著者'])[0];
-        const author = authorPage ? byPage.get(authorPage) : undefined;
-        const slug = pText(p['slug']) || r.id.replace(/-/g, '');
-        return {
-          slug,
-          title: pText(p['タイトル']),
-          authorId: author?.id ?? '',
-          authorName: author?.name ?? '',
-          authorImage: author?.image ?? '',
-          publishDate: new Date(pDate(p['公開日']) || r.created_time),
-          excerpt: pText(p['抜粋']),
-          cover: localizeImage(pFile(p['カバー画像'])),
-          tags: pMulti(p['タグ']),
-          _pageId: r.id,
-        } as PostMeta & { _pageId: string };
-      });
+      const now = Date.now();
+      return rows
+        .map((r) => {
+          const p = r.properties;
+          const authorPage = pRelIds(p['著者'])[0];
+          const author = authorPage ? byPage.get(authorPage) : undefined;
+          const slug = pText(p['slug']) || r.id.replace(/-/g, '');
+          return {
+            slug,
+            title: pText(p['タイトル']),
+            authorId: author?.id ?? '',
+            authorName: author?.name ?? '',
+            authorImage: author?.image ?? '',
+            publishDate: new Date(pDate(p['公開日']) || r.created_time),
+            excerpt: pText(p['抜粋']),
+            cover: localizeImage(pFile(p['カバー画像'])),
+            tags: pMulti(p['タグ']),
+            _pageId: r.id,
+          } as PostMeta & { _pageId: string };
+        })
+        // 予約投稿：公開日が未来の記事は、その日時が来るまで表示しない
+        .filter((post) => post.publishDate.getTime() <= now);
     })();
   }
   return _posts;
