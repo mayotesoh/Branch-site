@@ -191,7 +191,8 @@ export interface Course {
   category: string; // グルーピング用の主カテゴリ（categories の先頭）
   categories: string[]; // カテゴリ（マルチセレクト全値）
   arts: string[]; // 占術（タロット/手相/占星術 など）
-  instructor: string;
+  instructor: string; // 講師名（' / ' 連結）
+  instructors: { name: string; id: string }[]; // 個別ページリンク用
   courseName: string;
   desc: string;
   period: string;
@@ -210,14 +211,16 @@ export interface Course {
 
 let _courses: Promise<Course[]> | null = null;
 
-// 講師DB全件（公開/非公開問わず）から pageId → 氏名 のマップ
-let _instrMap: Promise<Map<string, string>> | null = null;
-function getInstructorMap(): Promise<Map<string, string>> {
+// 講師DB全件（公開/非公開問わず）から pageId → {氏名, id} のマップ
+let _instrMap: Promise<Map<string, { name: string; id: string }>> | null = null;
+function getInstructorMap(): Promise<Map<string, { name: string; id: string }>> {
   if (!_instrMap) {
     _instrMap = (async () => {
       const rows = await queryAll(INSTR_DB);
-      const m = new Map<string, string>();
-      for (const r of rows) m.set(r.id, pText(r.properties['名前']));
+      const m = new Map<string, { name: string; id: string }>();
+      for (const r of rows) {
+        m.set(r.id, { name: pText(r.properties['名前']), id: pText(r.properties['id']) });
+      }
       return m;
     })();
   }
@@ -251,6 +254,9 @@ export function getCourses(): Promise<Course[]> {
               );
           }
           const cats = pMulti(p['カテゴリ']);
+          const instrs = pRelIds(p['担当講師'])
+            .map((id: string) => instrMap.get(id))
+            .filter(Boolean) as { name: string; id: string }[];
           return {
             pageId: r.id,
             name: pText(p['講座名']),
@@ -258,10 +264,8 @@ export function getCourses(): Promise<Course[]> {
             category: cats[0] ?? '',
             categories: cats,
             arts: pMulti(p['占術']),
-            instructor: pRelIds(p['担当講師'])
-              .map((id: string) => instrMap.get(id))
-              .filter(Boolean)
-              .join(' / '),
+            instructor: instrs.map((x) => x.name).join(' / '),
+            instructors: instrs,
             courseName: pText(p['コース名']),
             desc: pText(p['説明']),
             period: pText(p['期間・時間']),

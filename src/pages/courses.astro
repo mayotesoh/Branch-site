@@ -1,13 +1,17 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import LineButton from '../components/LineButton.astro';
-import { getCourses } from '../lib/notion';
+import { getCourses, getAuthors } from '../lib/notion';
 
 const base = import.meta.env.BASE_URL;
 const joinUrl = `${base.replace(/\/$/, '')}/join`;
 const courseUrl = (id: string) => `${base.replace(/\/$/, '')}/courses/${id}`;
+const staffUrl = (id: string) => `${base.replace(/\/$/, '')}/staff/${id}`;
+const yen = (n: number) => '¥' + n.toLocaleString('ja-JP');
 
 const allCourses = await getCourses();
+// 個別ページがある（公開）スタッフのidだけリンクする
+const publicStaffIds = new Set((await getAuthors()).map((a) => a.id).filter(Boolean));
 
 // 養成講座（種別で判定）
 const certCourses = allCourses
@@ -25,6 +29,9 @@ const certCourses = allCourses
     curriculum: c.curriculum,
     extra: c.extra,
     arts: c.arts,
+    instructors: c.instructors,
+    memberPrice: c.memberPrice,
+    nonMemberPrice: c.nonMemberPrice,
   }));
 
 // カテゴリ別メタ（アイコン・リード文はコード側で保持）
@@ -63,10 +70,13 @@ const categories: {
     title: string;
     desc: string;
     instructor: string;
+    instructors: { name: string; id: string }[];
     method: string;
     time: string;
     note: string;
     arts: string[];
+    memberPrice: number;
+    nonMemberPrice: number;
   }[];
 }[] = [];
 for (const c of sessionCourses) {
@@ -81,10 +91,13 @@ for (const c of sessionCourses) {
     title: c.name,
     desc: c.desc,
     instructor: c.instructor,
+    instructors: c.instructors,
     method: c.method,
     time: c.period,
     note: c.note,
     arts: c.arts,
+    memberPrice: c.memberPrice,
+    nonMemberPrice: c.nonMemberPrice,
   });
 }
 
@@ -181,20 +194,23 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
                   {c.arts.map((a) => (
                     <span class="badge badge-art">{ART_ICON[a] ?? '🔮'} {a}</span>
                   ))}
-                  {c.instructor && <span class="badge">👤 {c.instructor}</span>}
+                  {c.instructors.map((teacher) =>
+                    publicStaffIds.has(teacher.id) ? (
+                      <a class="badge badge-teacher" href={staffUrl(teacher.id)}>👤 {teacher.name}</a>
+                    ) : (
+                      <span class="badge">👤 {teacher.name}</span>
+                    )
+                  )}
                   {c.period && <span class="badge">⏱ {c.period}</span>}
                   {c.online && <span class="badge">💻 {c.online}</span>}
                   {c.afterCare && <span class="badge">2か月間 無料アフターフォロー付</span>}
                 </div>
-                <details class="curriculum">
-                  <summary>カリキュラムを見る</summary>
-                  <ul>
-                    {c.curriculum.map((item) => (
-                      <li>{item}</li>
-                    ))}
-                  </ul>
-                  {c.extra && <p class="cert-extra">{c.extra}</p>}
-                </details>
+                {(c.memberPrice > 0 || c.nonMemberPrice > 0) && (
+                  <div class="price-row">
+                    {c.memberPrice > 0 && <span class="price"><b>会員</b>{yen(c.memberPrice)}</span>}
+                    {c.nonMemberPrice > 0 && <span class="price"><b>一般</b>{yen(c.nonMemberPrice)}</span>}
+                  </div>
+                )}
                 <a class="detail-link" href={courseUrl(c.id)}>詳細・お申し込み →</a>
               </article>
             ))
@@ -222,10 +238,22 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
                     {item.arts.map((a) => (
                       <span class="badge badge-art">{ART_ICON[a] ?? '🔮'} {a}</span>
                     ))}
-                    {item.instructor && <span class="badge">👤 {item.instructor}</span>}
+                    {item.instructors.map((teacher) =>
+                      publicStaffIds.has(teacher.id) ? (
+                        <a class="badge badge-teacher" href={staffUrl(teacher.id)}>👤 {teacher.name}</a>
+                      ) : (
+                        <span class="badge">👤 {teacher.name}</span>
+                      )
+                    )}
                     {item.time && <span class="badge">⏱ {item.time}</span>}
                     {item.method && <span class="badge badge-method">{item.method}</span>}
                   </div>
+                  {(item.memberPrice > 0 || item.nonMemberPrice > 0) && (
+                    <div class="price-row">
+                      {item.memberPrice > 0 && <span class="price"><b>会員</b>{yen(item.memberPrice)}</span>}
+                      {item.nonMemberPrice > 0 && <span class="price"><b>一般</b>{yen(item.nonMemberPrice)}</span>}
+                    </div>
+                  )}
                   {item.note && <p class="course-note">※ {item.note}</p>}
                   <a class="detail-link" href={courseUrl(item.id)}>詳細・お申し込み →</a>
                 </li>
@@ -395,6 +423,37 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
     background: var(--color-primary);
     border-color: var(--color-primary);
     color: #fff;
+  }
+  a.badge-teacher {
+    border-color: var(--color-primary);
+    color: var(--color-primary-soft);
+    text-decoration: none;
+    transition: background 0.15s ease, color 0.15s ease;
+  }
+  a.badge-teacher:hover {
+    background: var(--color-primary);
+    color: #fff;
+  }
+  .price-row {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.6rem;
+    margin-top: 0.7rem;
+  }
+  .price {
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.3rem 0.7rem;
+    font-size: 0.95rem;
+    font-weight: 700;
+    color: var(--color-primary-soft);
+  }
+  .price b {
+    font-size: 0.68rem;
+    color: var(--color-text-muted);
+    margin-right: 0.4rem;
+    font-weight: 700;
   }
   .badge-note {
     background: transparent;

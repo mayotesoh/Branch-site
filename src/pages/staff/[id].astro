@@ -1,0 +1,150 @@
+---
+import Layout from '../../layouts/Layout.astro';
+import { getAuthors, getPageBodyHtml } from '../../lib/notion';
+import { SNS } from '../../lib/sns';
+
+export async function getStaticPaths() {
+  const authors = await getAuthors();
+  const withBio = await Promise.all(
+    authors.map(async (a) => ({ ...a, bio: await getPageBodyHtml(a.pageId) }))
+  );
+  return withBio
+    .filter((a) => a.id)
+    .map((a) => ({ params: { id: a.id }, props: { member: a } }));
+}
+
+const { member: m } = Astro.props;
+const base = import.meta.env.BASE_URL;
+const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+const hasSns = SNS.some((s) => (m.sns as any)[s.key]);
+---
+
+<Layout
+  title={`${m.name}｜スタッフ紹介｜Fortune Labo`}
+  description={m.role ? `${m.name}（${m.role}）のプロフィール` : `${m.name} のプロフィール`}
+>
+  <section class="section">
+    <div class="container narrow">
+      <a class="back" href={link('/instructors')}>← スタッフ紹介へ</a>
+
+      <div class="head">
+        <div class="photo">
+          {m.image ? (
+            <img src={m.image} alt={`${m.name}の写真`} />
+          ) : (
+            <div class="photo-fallback" aria-hidden="true">{m.name.trim().charAt(0)}</div>
+          )}
+        </div>
+        <div class="head-body">
+          <h1 class="name">
+            {m.name}
+            {m.kana && <span class="kana">{m.kana}</span>}
+          </h1>
+          {m.role && <p class="role">{m.role}</p>}
+
+          <div class="links">
+            {m.id && (
+              <a class="btn-mini" href={link(`/blog/author/${m.id}`)}>ブログを見る</a>
+            )}
+            {hasSns && (
+              <div class="sns-row">
+                {SNS.map((s) =>
+                  (m.sns as any)[s.key] ? (
+                    <a
+                      class={`sns sns-${s.key}`}
+                      href={(m.sns as any)[s.key]}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      aria-label={`${m.name}の${s.label}`}
+                    >
+                      <svg viewBox="0 0 24 24" aria-hidden="true"><path d={s.path} /></svg>
+                    </a>
+                  ) : null
+                )}
+              </div>
+            )}
+          </div>
+        </div>
+      </div>
+
+      {m.arts.length > 0 && (
+        <div class="block">
+          <h2 class="block-h">主な占術・専門</h2>
+          <ul class="arts">
+            {m.arts.map((a) => <li>{a}</li>)}
+          </ul>
+        </div>
+      )}
+
+      <div class="block">
+        <h2 class="block-h">自己紹介</h2>
+        {m.bio ? (
+          <div class="bio-body" set:html={m.bio} />
+        ) : (
+          <p class="empty">自己紹介は準備中です。</p>
+        )}
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<style>
+  .narrow { max-width: 720px; }
+  .back { display: inline-block; margin-bottom: 1.2rem; font-size: 0.9rem; color: var(--color-text-muted); }
+
+  .head { display: flex; gap: 1.5rem; align-items: flex-start; flex-wrap: wrap; }
+  .photo {
+    width: 140px; height: 140px; flex-shrink: 0;
+    border-radius: 16px; overflow: hidden; border: 1px solid var(--color-border);
+    background: var(--color-bg-soft);
+  }
+  .photo img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .photo-fallback {
+    width: 100%; height: 100%; display: flex; align-items: center; justify-content: center;
+    font-size: 3rem; font-family: var(--font-serif); color: var(--color-primary-soft);
+  }
+  .head-body { flex: 1; min-width: 220px; }
+  .name { font-size: clamp(1.6rem, 4.5vw, 2.1rem); display: flex; align-items: baseline; gap: 0.6rem; flex-wrap: wrap; }
+  .kana { font-size: 0.9rem; color: var(--color-text-muted); font-weight: 400; }
+  .role { color: var(--color-primary-soft); margin-top: 0.3rem; }
+
+  .links { margin-top: 1rem; display: flex; align-items: center; flex-wrap: wrap; gap: 0.8rem 1rem; }
+  .btn-mini {
+    display: inline-flex; align-items: center; gap: 0.35rem;
+    padding: 0.42rem 1rem; border-radius: 999px; border: 1px solid var(--color-primary);
+    background: var(--color-primary); color: #fff; font-weight: 700; font-size: 0.85rem; line-height: 1;
+  }
+  .btn-mini:hover { background: var(--color-primary-soft); color: #fff; }
+  .sns-row { display: flex; gap: 0.5rem; }
+  .sns {
+    width: 34px; height: 34px; display: inline-flex; align-items: center; justify-content: center;
+    border-radius: 50%; background: var(--color-bg-soft); border: 1px solid var(--color-border);
+    color: var(--color-text-muted); transition: transform 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .sns svg { width: 16px; height: 16px; fill: currentColor; }
+  .sns:hover { transform: translateY(-2px); }
+  .sns-instagram:hover { color: #e1306c; border-color: #e1306c; }
+  .sns-x:hover { color: #000; border-color: #000; }
+  .sns-threads:hover { color: #000; border-color: #000; }
+  .sns-facebook:hover { color: #1877f2; border-color: #1877f2; }
+  .sns-tiktok:hover { color: #010101; border-color: #010101; }
+  .sns-youtube:hover { color: #ff0000; border-color: #ff0000; }
+  .sns-hp:hover { color: var(--color-primary); border-color: var(--color-primary); }
+
+  .block { margin-top: 2rem; padding-top: 1.6rem; border-top: 1px solid var(--color-border); }
+  .block-h { font-size: 1.1rem; color: var(--color-primary-soft); margin-bottom: 0.9rem; }
+  .arts { list-style: none; display: flex; flex-wrap: wrap; gap: 0.5rem; }
+  .arts li {
+    background: var(--color-bg-soft); border: 1px solid var(--color-primary);
+    color: var(--color-primary-soft); border-radius: 999px; padding: 0.3rem 0.9rem; font-size: 0.85rem;
+  }
+  .empty { color: var(--color-text-muted); }
+
+  .bio-body { color: var(--color-text); font-size: 0.97rem; line-height: 1.95; }
+  .bio-body :global(p) { margin: 0 0 1rem; }
+  .bio-body :global(h1), .bio-body :global(h2), .bio-body :global(h3) { margin: 1.4rem 0 0.6rem; font-size: 1.1rem; }
+  .bio-body :global(ul), .bio-body :global(ol) { margin: 0 0 1rem; padding-left: 1.4rem; }
+  .bio-body :global(li) { margin-bottom: 0.4rem; }
+  .bio-body :global(a) { color: var(--color-primary-soft); text-decoration: underline; }
+  .bio-body :global(img) { border-radius: 12px; margin: 0.6rem 0; }
+</style>

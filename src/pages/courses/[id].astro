@@ -2,21 +2,26 @@
 import Layout from '../../layouts/Layout.astro';
 import PayjpCard from '../../components/PayjpCard.astro';
 import { GAS_URL, LINE_URL } from '../../consts';
-import { getCourses } from '../../lib/notion';
+import { getCourses, getPageBodyHtml, getAuthors } from '../../lib/notion';
 
 export async function getStaticPaths() {
   const courses = await getCourses();
-  return courses.map((c) => ({
-    params: { id: c.pageId.replace(/-/g, '') },
-    props: { course: c },
-  }));
+  return Promise.all(
+    courses.map(async (c) => ({
+      params: { id: c.pageId.replace(/-/g, '') },
+      props: { course: c, body: await getPageBodyHtml(c.pageId) },
+    }))
+  );
 }
 
-const { course } = Astro.props;
+const { course, body } = Astro.props;
 const base = import.meta.env.BASE_URL;
 const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`;
+const staffUrl = (id: string) => `${base.replace(/\/$/, '')}/staff/${id}`;
 const yen = (n: number) => '¥' + n.toLocaleString('ja-JP');
 const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPrice > 0);
+const hasPrice = course.memberPrice > 0 || course.nonMemberPrice > 0;
+const publicStaffIds = new Set((await getAuthors()).map((a) => a.id).filter(Boolean));
 ---
 
 <Layout
@@ -42,8 +47,28 @@ const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPri
 
       <!-- メタ情報 -->
       <div class="c-meta">
-        {course.instructor && (
-          <div class="meta-row"><span>担当講師</span><strong>{course.instructor}</strong></div>
+        {course.instructors.length > 0 && (
+          <div class="meta-row">
+            <span>担当講師</span>
+            <strong class="teachers">
+              {course.instructors.map((teacher, i) => (
+                <>
+                  {i > 0 && ' / '}
+                  {publicStaffIds.has(teacher.id) ? (
+                    <a href={staffUrl(teacher.id)}>{teacher.name}</a>
+                  ) : (
+                    teacher.name
+                  )}
+                </>
+              ))}
+            </strong>
+          </div>
+        )}
+        {course.memberPrice > 0 && (
+          <div class="meta-row"><span>会員価格</span><strong>{yen(course.memberPrice)}</strong></div>
+        )}
+        {course.nonMemberPrice > 0 && (
+          <div class="meta-row"><span>一般価格</span><strong>{yen(course.nonMemberPrice)}</strong></div>
         )}
         {course.period && (
           <div class="meta-row"><span>期間・時間</span><strong>{course.period}</strong></div>
@@ -56,8 +81,14 @@ const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPri
         )}
       </div>
 
-      <!-- カリキュラム -->
-      {course.curriculum.length > 0 && (
+      <!-- 講座内容（Notionページ本文：画像・動画・カリキュラムなど） -->
+      {body ? (
+        <div class="c-block">
+          <h2 class="c-h2">講座内容</h2>
+          <div class="c-body" set:html={body} />
+          {course.extra && <p class="c-extra">{course.extra}</p>}
+        </div>
+      ) : course.curriculum.length > 0 ? (
         <div class="c-block">
           <h2 class="c-h2">カリキュラム</h2>
           <ul class="curri">
@@ -65,7 +96,7 @@ const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPri
           </ul>
           {course.extra && <p class="c-extra">{course.extra}</p>}
         </div>
-      )}
+      ) : null}
 
       {course.note && <p class="c-note">※ {course.note}</p>}
 
@@ -326,6 +357,27 @@ const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPri
     color: var(--color-accent-soft);
     font-size: 0.86rem;
   }
+  .teachers a {
+    color: var(--color-primary-soft);
+    text-decoration: underline;
+  }
+  /* Notionページ本文（画像・動画・見出し・リスト） */
+  .c-body {
+    color: var(--color-text);
+    font-size: 0.97rem;
+    line-height: 1.95;
+  }
+  .c-body :global(p) { margin: 0 0 1rem; }
+  .c-body :global(h1),
+  .c-body :global(h2),
+  .c-body :global(h3) { margin: 1.5rem 0 0.6rem; font-size: 1.1rem; color: var(--color-primary-soft); }
+  .c-body :global(ul),
+  .c-body :global(ol) { margin: 0 0 1rem; padding-left: 1.4rem; }
+  .c-body :global(li) { margin-bottom: 0.4rem; }
+  .c-body :global(a) { color: var(--color-primary-soft); text-decoration: underline; }
+  .c-body :global(img) { max-width: 100%; height: auto; border-radius: 12px; margin: 0.6rem 0; }
+  .c-body :global(iframe) { max-width: 100%; border-radius: 12px; margin: 0.6rem 0; }
+  .c-body :global(video) { max-width: 100%; border-radius: 12px; margin: 0.6rem 0; }
   .c-note {
     color: var(--color-accent-soft);
     font-size: 0.85rem;
