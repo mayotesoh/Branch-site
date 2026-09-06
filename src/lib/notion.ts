@@ -238,9 +238,12 @@ export function getCourses(): Promise<Course[]> {
       return Promise.all(
         rows.map(async (r) => {
           const p = r.properties;
-          const type = pSelect(p['種別']);
+          // 「種別」は廃止。カテゴリに「養成講座」が含まれるかで養成講座を判定する
+          const cats = pMulti(p['カテゴリ']);
+          const isCert = cats.includes('養成講座');
+          const type = isCert ? '養成講座' : 'セッション';
           let curriculum: string[] = [];
-          if (type === '養成講座') {
+          if (isCert) {
             const blocks: any = await notion.blocks.children.list({
               block_id: r.id,
               page_size: 100,
@@ -253,7 +256,6 @@ export function getCourses(): Promise<Course[]> {
                   .join('')
               );
           }
-          const cats = pMulti(p['カテゴリ']);
           const instrs = pRelIds(p['担当講師'])
             .map((id: string) => instrMap.get(id))
             .filter(Boolean) as { name: string; id: string }[];
