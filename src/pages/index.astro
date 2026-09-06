@@ -22,13 +22,17 @@ const EV_TYPE_ICON: Record<string, string> = {
   zoom解放日: '💻',
   ライブトーク: '🎙️',
 };
-const EV_WD = ['日', '月', '火', '水', '木', '金', '土'];
+// ビルド環境はUTCのため、日本時間（Asia/Tokyo）で組み立てる
 const fmtEvent = (iso: string) => {
   const d = new Date(iso);
-  const time = iso.includes('T')
-    ? `${String(d.getHours()).padStart(2, '0')}:${String(d.getMinutes()).padStart(2, '0')}`
-    : '';
-  return { md: `${d.getMonth() + 1}/${d.getDate()}`, wd: EV_WD[d.getDay()], time };
+  const parts = new Intl.DateTimeFormat('ja-JP', {
+    timeZone: 'Asia/Tokyo',
+    month: 'numeric', day: 'numeric', weekday: 'short',
+    ...(iso.includes('T') ? { hour: '2-digit', minute: '2-digit', hour12: false } : {}),
+  }).formatToParts(d);
+  const get = (t: string) => parts.find((x) => x.type === t)?.value ?? '';
+  const time = iso.includes('T') ? `${get('hour')}:${get('minute')}` : '';
+  return { md: `${get('month')}/${get('day')}`, wd: get('weekday'), time };
 };
 
 const instaPosts = await getInstaPosts();
