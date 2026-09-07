@@ -15,6 +15,30 @@
 
 const EVAL_DB_ID = '3cc76a17-0aae-81aa-a916-f611abe889b2'; // 鑑定ロープレ評価DB
 const EVAL_KEYS = ['声・話し方', '聞く姿勢', '言葉選び', '鑑定の流れ', '鑑定内容', '安心感'];
+const EVAL_FORM_ID = '1Xsv-Ciejrm3tqpE9ZYXQsrE4saQRf36Yfh8NLlKGlkQ'; // 既存フォーム
+const EVAL_MEMO_SUFFIX = 'のメモ'; // 各項目のメモ欄タイトル（例：「声・話し方のメモ」）
+
+/**
+ * 【1回だけ実行】既存フォームに各項目の「メモ」欄（自由記述）を追加する。
+ * ※ 既に同名の項目があればスキップ（重複追加しない）。
+ * 追加後、回答スプレッドシートにも自動で列が増えます。
+ */
+function addEvalMemoFields() {
+  const form = FormApp.openById(EVAL_FORM_ID);
+  const existing = {};
+  form.getItems().forEach(function (it) { existing[it.getTitle()] = true; });
+  let added = 0;
+  EVAL_KEYS.forEach(function (k) {
+    const title = k + EVAL_MEMO_SUFFIX;
+    if (existing[title]) return;
+    form.addParagraphTextItem()
+      .setTitle(title)
+      .setHelpText(k + 'について、気づき・良かった点・改善点などを自由に記録できます（任意）');
+    added++;
+  });
+  console.log('メモ欄を追加しました：' + added + '件（既存はスキップ）');
+  console.log('フォーム: ' + form.getEditUrl());
+}
 
 /** 【初回のみ実行】評価フォーム＋回答スプシ＋送信トリガーを作成 */
 function setupEvalForm() {
@@ -34,6 +58,8 @@ function setupEvalForm() {
   EVAL_KEYS.forEach(function (k) {
     form.addScaleItem().setTitle(k).setHelpText(labels[k]).setBounds(1, 5)
       .setLabels('改善が必要', 'プロレベル').setRequired(true);
+    form.addParagraphTextItem().setTitle(k + EVAL_MEMO_SUFFIX)
+      .setHelpText(k + 'について、気づき・良かった点・改善点などを自由に記録（任意）');
   });
 
   form.addParagraphTextItem().setTitle('総合コメント').setHelpText('全体の所感・良かった点・次回の課題など');
@@ -86,6 +112,9 @@ function onEvalFormSubmit(e) {
     EVAL_KEYS.forEach(function (k) {
       const v = parseInt(map[k], 10);
       if (!isNaN(v)) props[k] = { number: v };
+      // 各項目のメモを Notion「〇〇メモ」列へ
+      const memo = String(map[k + EVAL_MEMO_SUFFIX] || '').trim();
+      if (memo) props[k + 'メモ'] = { rich_text: [{ text: { content: memo.slice(0, 1900) } }] };
     });
     if (mid) props['会員'] = { relation: [{ id: mid }] };
 
