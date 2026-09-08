@@ -237,61 +237,66 @@ const quizData = await getQuiz();
   .chip:hover { border-color: var(--color-primary); color: var(--color-primary-soft); }
   .chip.is-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
+</style>
+
+<!-- クイズカードはJSのinnerHTMLで生成されるため #quizArea 配下をグローバルCSSにする -->
+<style is:global>
   /* 1問カード */
-  .quiz-card {
+  #quizArea .quiz-card {
     background: var(--color-surface); border: 1px solid var(--color-border);
-    border-radius: 16px; padding: 1.4rem 1.4rem 1.2rem; margin-top: 1rem;
+    border-radius: 16px; padding: 1.5rem 1.5rem 1.3rem; margin-top: 1rem;
     box-shadow: 0 8px 26px rgba(26, 36, 64, 0.08);
   }
-  .quiz-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
-  .quiz-count { font-weight: 800; color: var(--color-primary-soft); font-size: 0.95rem; }
-  .quiz-artname { font-size: 0.8rem; color: var(--color-text-muted); }
-  .quiz-bar { height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; margin-bottom: 1.2rem; }
-  .quiz-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--color-primary-soft), var(--color-primary)); transition: width 0.25s ease; }
-  .quiz-q { font-size: 1.15rem; font-weight: 700; line-height: 1.7; margin-bottom: 1.1rem; }
-  .quiz-opts { display: grid; gap: 0.7rem; }
-  .choice-btn {
+  #quizArea .quiz-top { display: flex; justify-content: space-between; align-items: baseline; gap: 0.6rem; margin-bottom: 0.6rem; }
+  #quizArea .quiz-count { font-weight: 800; color: var(--color-primary-soft); font-size: 0.95rem; }
+  #quizArea .quiz-artname { font-size: 0.8rem; color: var(--color-text-muted); }
+  #quizArea .quiz-bar { height: 8px; border-radius: 999px; background: var(--color-border); overflow: hidden; margin-bottom: 1.4rem; }
+  #quizArea .quiz-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--color-primary-soft), var(--color-primary)); transition: width 0.25s ease; }
+  #quizArea .quiz-q { font-size: 1.2rem; font-weight: 700; line-height: 1.8; margin-bottom: 1.3rem; }
+  #quizArea .quiz-opts { display: flex; flex-direction: column; gap: 0.7rem; }
+  #quizArea .choice-btn {
     display: flex; gap: 0.9rem; align-items: center; text-align: left; width: 100%;
-    padding: 0.95rem 1.1rem; border: 2px solid var(--color-border); border-radius: 12px;
+    padding: 1rem 1.1rem; border: 2px solid var(--color-border); border-radius: 12px;
     background: var(--color-bg-soft); color: var(--color-text);
-    cursor: pointer; font-size: 1.02rem; line-height: 1.6; font-family: inherit;
+    cursor: pointer; font-size: 1.05rem; line-height: 1.6; font-family: inherit;
     transition: border-color 0.15s, background 0.15s, transform 0.1s;
   }
-  .choice-btn:hover { border-color: var(--color-primary); }
-  .choice-btn:active { transform: scale(0.99); }
-  .choice-btn.sel { border-color: var(--color-primary); background: rgba(46, 74, 138, 0.1); color: var(--color-primary-soft); font-weight: 700; }
-  .choice-number {
+  #quizArea .choice-btn:hover { border-color: var(--color-primary); }
+  #quizArea .choice-btn:active { transform: scale(0.99); }
+  #quizArea .choice-btn.sel { border-color: var(--color-primary); background: rgba(46, 74, 138, 0.12); color: var(--color-primary-soft); font-weight: 700; }
+  #quizArea .choice-number {
     flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
     width: 30px; height: 30px; border-radius: 50%;
     background: var(--color-surface); border: 2px solid currentColor;
     font-size: 0.9rem; font-weight: 800;
   }
-  .choice-text { flex: 1; }
-  .quiz-nav { display: flex; justify-content: flex-start; margin-top: 1.2rem; min-height: 1px; }
-  .quiz-nav .btn { font-size: 0.85rem; padding: 0.4rem 1rem; }
-  .grade-msg { text-align: center; font-size: 0.88rem; min-height: 1em; margin-top: 0.6rem; }
-  .grade-msg.error { color: #d33; }
-  .btn-block { width: 100%; margin-top: 0.5rem; }
+  #quizArea .choice-text { flex: 1; }
+  #quizArea .quiz-nav { display: flex; justify-content: flex-start; margin-top: 1.3rem; }
+  #quizArea .quiz-nav .btn { font-size: 0.85rem; padding: 0.45rem 1.1rem; }
+  #quizArea .grade-msg { text-align: center; font-size: 0.9rem; min-height: 1em; margin-top: 0.8rem; color: var(--color-text-muted); }
+  #quizArea .grade-msg.error { color: #d33; }
+  #quizArea .btn-block { width: 100%; }
 
   /* 結果 */
-  .quiz-result { margin-top: 1rem; }
-  .score-final {
-    text-align: center; padding: 1.2rem;
+  #quizArea .quiz-result { margin-top: 1rem; }
+  #quizArea .score-final {
+    text-align: center; padding: 1.4rem;
     background: var(--color-bg-soft); border: 1px solid var(--color-border); border-radius: 14px;
-    font-size: 1.05rem; margin-bottom: 1.4rem;
+    font-size: 1.1rem; margin-bottom: 1.6rem;
   }
-  .score-final strong { color: var(--color-primary-soft); font-size: 1.5rem; }
-  .score-final.passed { border-color: var(--color-accent); }
-  .rv-h { font-size: 1.05rem; color: var(--color-primary-soft); margin: 0.5rem 0 0.8rem; }
-  .rv {
+  #quizArea .score-final strong { color: var(--color-primary-soft); font-size: 1.6rem; }
+  #quizArea .score-final.passed { border-color: var(--color-accent); }
+  #quizArea .rv-h { font-size: 1.1rem; color: var(--color-primary-soft); margin: 0.5rem 0 0.9rem; }
+  #quizArea .rv {
     background: var(--color-surface); border: 1px solid var(--color-border);
-    border-left: 4px solid var(--color-border); border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 0.7rem;
+    border-left: 4px solid var(--color-border); border-radius: 12px; padding: 1rem 1.2rem; margin-bottom: 0.8rem;
   }
-  .rv.ok { border-left-color: #06a047; }
-  .rv.ng { border-left-color: #d33; }
-  .rv-q { font-weight: 700; line-height: 1.6; }
-  .rv-a { font-size: 0.9rem; font-weight: 700; margin-top: 0.4rem; }
-  .rv.ok .rv-a { color: #06a047; }
-  .rv.ng .rv-a { color: #d33; }
-  .rv-e { color: var(--color-text-muted); font-size: 0.88rem; line-height: 1.8; margin-top: 0.4rem; }
+  #quizArea .rv.ok { border-left-color: #06a047; }
+  #quizArea .rv.ng { border-left-color: #d33; }
+  #quizArea .rv-q { font-weight: 700; line-height: 1.7; }
+  #quizArea .rv-a { font-size: 0.92rem; font-weight: 700; margin-top: 0.5rem; }
+  #quizArea .rv.ok .rv-a { color: #06a047; }
+  #quizArea .rv.ng .rv-a { color: #d33; }
+  #quizArea .rv-e { color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.9; margin-top: 0.5rem; }
+  #quizArea .btn-block { margin-top: 0.5rem; }
 </style>
