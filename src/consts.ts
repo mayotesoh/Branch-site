@@ -6,7 +6,7 @@
  * Fortune Grace は Fortune Labo 出身の占い師が相談者を鑑定する鑑定サイト。
  * ※ base が異なるため相手サイトへは絶対URLでリンクする。
  */
-export const SISTER_SITE_URL = 'https://mayotesoh.github.io/fortunegrace/';
+export const SISTER_SITE_URL = 'https://f-grace-uranai.com/';
 export const SISTER_SITE_NAME = 'Fortune Grace';
 export const SISTER_SITE_DESC = '占い鑑定';
 
