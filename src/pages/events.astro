@@ -177,8 +177,8 @@ const past = allEvents
         .map((e) => {
           const t = timeStr(e.date);
           return `<button class="cal-ev" type="button" data-ev-open="${esc(e.id)}">`
-            + `<span class="cal-ev-ic">${ICON[e.type] || '✦'}</span>`
-            + `<span class="cal-ev-nm">${t ? esc(t) + ' ' : ''}${esc(e.name)}</span></button>`;
+            + `<span class="cal-ev-nm"><span class="cal-ev-ic">${ICON[e.type] || '✦'}</span>${esc(e.name)}</span>`
+            + `${t ? `<span class="cal-ev-tm">${esc(t)}</span>` : ''}</button>`;
         })
         .join('');
       html += `<div class="${cls.join(' ')}"><span class="cal-day">${day}</span>${chips}</div>`;
@@ -324,14 +324,14 @@ const past = allEvents
 <!-- カレンダーのセル・イベントはJSで描画するため #calGrid 配下をグローバルCSSにする -->
 <style is:global>
   #calGrid .cal-cell {
-    min-height: 74px;
+    min-height: 96px;
     border: 1px solid var(--color-border);
     border-radius: 8px;
-    padding: 0.25rem;
+    padding: 0.3rem;
     background: var(--color-bg-soft);
     display: flex;
     flex-direction: column;
-    gap: 3px;
+    gap: 4px;
     overflow: hidden;
   }
   #calGrid .cal-cell.empty { border: none; background: transparent; }
@@ -341,16 +341,21 @@ const past = allEvents
   #calGrid .cal-cell.today { border-color: var(--color-primary); background: rgba(46, 74, 138, 0.06); }
   #calGrid .cal-cell.today .cal-day { color: var(--color-primary-soft); font-weight: 800; }
   #calGrid .cal-ev {
-    display: flex; align-items: center; gap: 0.2rem; width: 100%; text-align: left;
-    border: none; border-radius: 5px; padding: 3px 5px; cursor: pointer;
-    background: var(--color-primary); color: #fff; font-size: 0.7rem; line-height: 1.3; font-family: inherit;
+    display: flex; flex-direction: column; gap: 1px; width: 100%; text-align: left;
+    border: none; border-radius: 6px; padding: 4px 6px; cursor: pointer;
+    background: var(--color-primary); color: #fff; font-size: 0.72rem; line-height: 1.35; font-family: inherit;
   }
   #calGrid .cal-ev:hover { filter: brightness(1.1); }
-  #calGrid .cal-ev-ic { flex-shrink: 0; }
-  #calGrid .cal-ev-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  #calGrid .cal-ev-ic { margin-right: 0.15rem; }
+  #calGrid .cal-ev-nm {
+    display: -webkit-box; -webkit-line-clamp: 2; -webkit-box-orient: vertical;
+    overflow: hidden; font-weight: 700;
+  }
+  #calGrid .cal-ev-tm { font-size: 0.64rem; opacity: 0.85; font-weight: 600; }
   @media (max-width: 560px) {
-    #calGrid .cal-cell { min-height: 60px; }
-    #calGrid .cal-ev-nm { display: none; }
-    #calGrid .cal-ev { justify-content: center; padding: 3px; font-size: 0.8rem; }
+    #calGrid .cal-cell { min-height: 66px; padding: 0.2rem; }
+    #calGrid .cal-ev { padding: 3px 4px; font-size: 0.64rem; }
+    #calGrid .cal-ev-nm { -webkit-line-clamp: 3; }
+    #calGrid .cal-ev-tm { display: none; }
   }
 </style>
