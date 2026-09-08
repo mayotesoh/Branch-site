@@ -436,6 +436,7 @@ export interface Theme {
   current: boolean; // 今週
   date: string;
   youtube: string;
+  image: string; // 手相などの添付画像（ローカル化済み）
   answers: ThemeAnswer[]; // 公開可の回答のみ
 }
 
@@ -476,6 +477,7 @@ export function getThemes(): Promise<Theme[]> {
           current: pCheckbox(p['今週']),
           date: pDate(p['日付']),
           youtube: p['YouTubeURL']?.url ?? '',
+          image: localizeImage(pFile(p['画像'])),
           answers: byTheme.get(r.id) ?? [],
         } as Theme;
       });

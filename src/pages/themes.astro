@@ -37,6 +37,9 @@ const past = themes.filter((t) => t !== current);
             <div class="theme-badge">今週のお題</div>
             <h2 class="theme-title">{current.title}</h2>
             {current.date && <p class="theme-date">{fmt(current.date)}</p>}
+            {current.image && (
+              <img class="theme-img" src={current.image} alt="お題の画像" loading="lazy" />
+            )}
             {current.desc && <p class="theme-desc">{current.desc}</p>}
             <div class="theme-actions">
               <a class="btn btn-primary" href={memberUrl}>会員ページで読み解きを投稿する →</a>
@@ -86,6 +89,7 @@ const past = themes.filter((t) => t !== current);
                   {t.date && <span class="past-date">{fmt(t.date)}</span>}
                 </summary>
                 <div class="past-body">
+                  {t.image && <img class="theme-img" src={t.image} alt="お題の画像" loading="lazy" />}
                   {t.desc && <p class="theme-desc">{t.desc}</p>}
                   {t.youtube && (
                     <a class="past-yt" href={t.youtube} target="_blank" rel="noopener noreferrer">
@@ -152,6 +156,10 @@ const past = themes.filter((t) => t !== current);
   .theme-title { font-size: 1.5rem; line-height: 1.4; }
   .theme-date { color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.3rem; }
   .theme-desc { color: var(--color-text-muted); line-height: 1.9; margin-top: 1rem; }
+  .theme-img {
+    display: block; max-width: 100%; height: auto; margin: 1rem 0 0;
+    border-radius: 12px; border: 1px solid var(--color-border);
+  }
   .theme-actions {
     display: flex; flex-wrap: wrap; gap: 0.7rem; margin-top: 1.5rem;
   }

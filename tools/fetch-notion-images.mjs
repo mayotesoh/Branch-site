@@ -27,6 +27,7 @@ const DATABASES = [
   { id: '30e989297ce14ea99cbea84a2e5e2180', withBlocks: true }, // スタッフ(講師)：顔写真＋自己紹介本文
   { id: '3a776a170aae81e88abbd889d401e589', withBlocks: false }, // 会員の声：顔写真
   { id: '9e653e0af59e47ebb3c1c9d443339e48', withBlocks: true }, // 講座：カバー＋本文（画像・動画）
+  { id: '3d276a170aae81c2a286d911351cf3dc', withBlocks: false }, // お題：画像（手相など）
 ];
 
 const headers = {

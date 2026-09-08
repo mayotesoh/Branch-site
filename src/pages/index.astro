@@ -204,6 +204,9 @@ const steps = [
           <div class="home-theme">
             <div class="home-theme-badge">今週のお題</div>
             <p class="home-theme-title">{currentTheme.title}</p>
+            {currentTheme.image && (
+              <img class="home-theme-img" src={currentTheme.image} alt="お題の画像" loading="lazy" />
+            )}
             {currentTheme.desc && <p class="home-theme-desc">{currentTheme.desc}</p>}
             <div class="home-theme-actions">
               <a class="btn btn-primary" href={themesUrl}>お題を見る・読み解きを投稿 →</a>
@@ -475,6 +478,10 @@ const steps = [
     margin-bottom: 0.7rem;
   }
   .home-theme-title { font-size: 1.25rem; font-weight: 700; line-height: 1.5; }
+  .home-theme-img {
+    display: block; max-width: 100%; height: auto; margin: 0.9rem 0 0;
+    border-radius: 12px; border: 1px solid var(--color-border);
+  }
   .home-theme-desc {
     color: var(--color-text-muted); line-height: 1.9; margin-top: 0.8rem;
     display: -webkit-box; -webkit-line-clamp: 3; -webkit-box-orient: vertical; overflow: hidden;
