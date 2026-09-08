@@ -37,6 +37,7 @@ const past = themes.filter((t) => t !== current);
             <div class="theme-badge">今週のお題</div>
             <h2 class="theme-title">{current.title}</h2>
             {current.date && <p class="theme-date">{fmt(current.date)}</p>}
+            {current.birth && <p class="theme-birth">🎂 生年月日：{current.birth}</p>}
             {current.image && (
               <img class="theme-img" src={current.image} alt="お題の画像" loading="lazy" />
             )}
@@ -89,6 +90,7 @@ const past = themes.filter((t) => t !== current);
                   {t.date && <span class="past-date">{fmt(t.date)}</span>}
                 </summary>
                 <div class="past-body">
+                  {t.birth && <p class="theme-birth">🎂 生年月日：{t.birth}</p>}
                   {t.image && <img class="theme-img" src={t.image} alt="お題の画像" loading="lazy" />}
                   {t.desc && <p class="theme-desc">{t.desc}</p>}
                   {t.youtube && (
@@ -155,6 +157,7 @@ const past = themes.filter((t) => t !== current);
   }
   .theme-title { font-size: 1.5rem; line-height: 1.4; }
   .theme-date { color: var(--color-text-muted); font-size: 0.85rem; margin-top: 0.3rem; }
+  .theme-birth { color: var(--color-primary-soft); font-weight: 700; font-size: 0.9rem; margin-top: 0.5rem; }
   .theme-desc { color: var(--color-text-muted); line-height: 1.9; margin-top: 1rem; }
   .theme-img {
     display: block; max-width: 100%; height: auto; margin: 1rem 0 0;

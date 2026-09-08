@@ -20,7 +20,7 @@ const memberEvents = (await getEvents())
 // 今週の題材（会員ページから読み解きを投稿できるように）
 const _themes = await getThemes();
 const _cur = _themes.find((t) => t.current) ?? _themes[0] ?? null;
-const memberTheme = _cur ? { id: _cur.pageId, title: _cur.title, desc: _cur.desc, image: _cur.image } : null;
+const memberTheme = _cur ? { id: _cur.pageId, title: _cur.title, desc: _cur.desc, image: _cur.image, birth: _cur.birth } : null;
 
 const _base = import.meta.env.BASE_URL;
 const quizUrl = `${_base.replace(/\/$/, '')}/quiz`;
@@ -221,6 +221,7 @@ const artOptions = await getMemberArtOptions();
       + `<summary class="mev-summary"><span class="mev-summary-t">📝 今週の題材に読み解きを投稿</span>`
       + `<span class="mev-toggle"><span class="mev-toggle-txt"></span><span class="mev-caret">▾</span></span></summary>`
       + `<p class="theme-q"><strong>お題：</strong>${esc(memberTheme.title)}</p>`
+      + (memberTheme.birth ? `<p class="theme-birth">🎂 生年月日：${esc(memberTheme.birth)}</p>` : '')
       + (memberTheme.image ? `<img class="theme-img" src="${esc(memberTheme.image)}" alt="お題の画像" loading="lazy" />` : '')
       + (memberTheme.desc ? `<p class="theme-qd">${esc(memberTheme.desc)}</p>` : '')
       + `<label class="theme-lbl">あなたの読み解き</label>`
@@ -726,6 +727,7 @@ const artOptions = await getMemberArtOptions();
   #dash .theme-q { font-size: 0.95rem; }
   #dash .theme-qd { color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.8; margin-top: 0.4rem; }
   #dash .theme-img { display: block; max-width: 100%; height: auto; margin: 0.7rem 0; border-radius: 10px; border: 1px solid var(--color-border); }
+  #dash .theme-birth { color: var(--color-primary-soft); font-weight: 700; font-size: 0.88rem; margin-top: 0.4rem; }
   #dash .theme-lbl { display: block; font-weight: 700; font-size: 0.85rem; margin: 0.9rem 0 0.3rem; }
   #dash .theme-input, #dash .theme-pen {
     width: 100%; padding: 0.6rem 0.8rem; border: 1px solid var(--color-border);

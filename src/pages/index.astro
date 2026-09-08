@@ -204,6 +204,7 @@ const steps = [
           <div class="home-theme">
             <div class="home-theme-badge">今週のお題</div>
             <p class="home-theme-title">{currentTheme.title}</p>
+            {currentTheme.birth && <p class="home-theme-birth">🎂 生年月日：{currentTheme.birth}</p>}
             {currentTheme.image && (
               <img class="home-theme-img" src={currentTheme.image} alt="お題の画像" loading="lazy" />
             )}
@@ -478,6 +479,7 @@ const steps = [
     margin-bottom: 0.7rem;
   }
   .home-theme-title { font-size: 1.25rem; font-weight: 700; line-height: 1.5; }
+  .home-theme-birth { color: var(--color-primary-soft); font-weight: 700; font-size: 0.9rem; margin-top: 0.5rem; }
   .home-theme-img {
     display: block; max-width: 100%; height: auto; margin: 0.9rem 0 0;
     border-radius: 12px; border: 1px solid var(--color-border);
