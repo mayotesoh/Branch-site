@@ -291,49 +291,54 @@ const QUESTIONS = [
   .q-count { color: var(--color-primary-soft); font-weight: 700; font-size: 0.9rem; }
   .q-text { font-size: 1.3rem; margin: 0.4rem 0 1.3rem; line-height: 1.6; }
   .q-options { display: grid; gap: 0.7rem; }
-  .opt {
-    text-align: left; width: 100%;
-    background: var(--color-surface);
-    border: 2px solid var(--color-border);
-    border-radius: 12px;
-    padding: 1rem 1.2rem;
-    font-size: 1rem; color: var(--color-text);
-    cursor: pointer; line-height: 1.5;
-    transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease;
-  }
-  .opt:hover { border-color: var(--color-primary); transform: translateY(-2px); }
-  .opt.selected { border-color: var(--color-primary); background: var(--color-bg-soft); }
   .link-back {
     margin-top: 1.2rem; background: none; border: none;
     color: var(--color-text-muted); cursor: pointer; font-size: 0.9rem;
   }
   .link-back:hover { color: var(--color-primary); }
 
-  .result-card {
+</style>
+
+<!-- 選択肢・結果はJSのinnerHTML/createElementで生成されるため #q-options / #result 配下をグローバルCSSに -->
+<style is:global>
+  #q-options .opt {
+    text-align: left; width: 100%;
+    background: var(--color-surface);
+    border: 2px solid var(--color-border);
+    border-radius: 12px;
+    padding: 1rem 1.2rem;
+    font-size: 1.02rem; color: var(--color-text); font-family: inherit;
+    cursor: pointer; line-height: 1.6;
+    transition: border-color 0.15s ease, transform 0.1s ease, background 0.15s ease;
+  }
+  #q-options .opt:hover { border-color: var(--color-primary); transform: translateY(-2px); }
+  #q-options .opt.selected { border-color: var(--color-primary); background: rgba(46, 74, 138, 0.1); color: var(--color-primary-soft); font-weight: 700; }
+
+  #result .result-card {
     background: var(--color-surface);
     border: 1px solid var(--color-border);
     border-top: 5px solid var(--color-primary);
     border-radius: var(--radius);
     padding: 2.2rem 1.6rem; text-align: center;
   }
-  .result-eyebrow { color: var(--color-text-muted); font-size: 0.9rem; }
-  .result-icon { font-size: 3.4rem; line-height: 1; margin: 0.5rem 0; }
-  .result-name { font-size: 1.6rem; color: var(--color-primary-soft); }
-  .result-catch { font-weight: 700; margin: 0.5rem 0 1rem; }
-  .result-body { color: var(--color-text-muted); line-height: 1.9; text-align: left; }
-  .sub-type { margin-top: 1rem; color: var(--color-text-muted); font-size: 0.92rem; }
-  .result-courses { margin: 1.6rem 0; }
-  .rc-label { font-weight: 700; margin-bottom: 0.6rem; }
-  .course-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
-  .course-tag {
+  #result .result-eyebrow { color: var(--color-text-muted); font-size: 0.9rem; }
+  #result .result-icon { font-size: 3.4rem; line-height: 1; margin: 0.5rem 0; }
+  #result .result-name { font-size: 1.6rem; color: var(--color-primary-soft); }
+  #result .result-catch { font-weight: 700; margin: 0.5rem 0 1rem; }
+  #result .result-body { color: var(--color-text-muted); line-height: 1.9; text-align: left; }
+  #result .sub-type { margin-top: 1rem; color: var(--color-text-muted); font-size: 0.92rem; }
+  #result .result-courses { margin: 1.6rem 0; }
+  #result .rc-label { font-weight: 700; margin-bottom: 0.6rem; }
+  #result .course-tags { display: flex; flex-wrap: wrap; gap: 0.5rem; justify-content: center; }
+  #result .course-tag {
     background: var(--color-bg-soft); border: 1px solid var(--color-border);
     border-radius: 999px; padding: 0.35rem 0.9rem; font-size: 0.85rem;
     color: var(--color-primary-soft);
   }
-  .result-actions {
+  #result .result-actions {
     display: flex; gap: 0.8rem; justify-content: center; flex-wrap: wrap; margin-top: 0.5rem;
   }
-  .result-note {
+  #result .result-note {
     margin-top: 1.6rem; padding-top: 1.2rem;
     border-top: 1px solid var(--color-border);
     color: var(--color-text-muted); font-size: 0.9rem; line-height: 1.8; text-align: left;
