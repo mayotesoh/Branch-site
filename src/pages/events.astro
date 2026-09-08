@@ -258,58 +258,6 @@ const past = allEvents
     grid-template-columns: repeat(7, 1fr);
     gap: 4px;
   }
-  .cal-cell {
-    min-height: 74px;
-    border: 1px solid var(--color-border);
-    border-radius: 8px;
-    padding: 0.25rem;
-    background: var(--color-bg-soft);
-    display: flex;
-    flex-direction: column;
-    gap: 3px;
-    overflow: hidden;
-  }
-  .cal-cell.empty {
-    border: none;
-    background: transparent;
-  }
-  .cal-day {
-    font-size: 0.75rem;
-    color: var(--color-text-muted);
-    padding-left: 0.15rem;
-  }
-  .cal-cell.sun .cal-day { color: #d05a5a; }
-  .cal-cell.sat .cal-day { color: #5a76d0; }
-  .cal-cell.today {
-    border-color: var(--color-primary);
-    background: rgba(46, 74, 138, 0.06);
-  }
-  .cal-cell.today .cal-day {
-    color: var(--color-primary-soft);
-    font-weight: 800;
-  }
-  .cal-ev {
-    display: flex;
-    align-items: center;
-    gap: 0.2rem;
-    width: 100%;
-    text-align: left;
-    border: none;
-    border-radius: 5px;
-    padding: 2px 4px;
-    cursor: pointer;
-    background: var(--color-primary);
-    color: #fff;
-    font-size: 0.68rem;
-    line-height: 1.25;
-  }
-  .cal-ev:hover { filter: brightness(1.08); }
-  .cal-ev-ic { flex-shrink: 0; }
-  .cal-ev-nm {
-    overflow: hidden;
-    text-overflow: ellipsis;
-    white-space: nowrap;
-  }
   .cal-hint {
     margin-top: 0.9rem;
     text-align: center;
@@ -370,12 +318,39 @@ const past = allEvents
 
   @media (max-width: 560px) {
     .cal { padding: 0.8rem; }
-    .cal-cell { min-height: 60px; }
-    .cal-ev-nm { display: none; }
-    .cal-ev {
-      justify-content: center;
-      padding: 3px;
-      font-size: 0.8rem;
-    }
+  }
+</style>
+
+<!-- カレンダーのセル・イベントはJSで描画するため #calGrid 配下をグローバルCSSにする -->
+<style is:global>
+  #calGrid .cal-cell {
+    min-height: 74px;
+    border: 1px solid var(--color-border);
+    border-radius: 8px;
+    padding: 0.25rem;
+    background: var(--color-bg-soft);
+    display: flex;
+    flex-direction: column;
+    gap: 3px;
+    overflow: hidden;
+  }
+  #calGrid .cal-cell.empty { border: none; background: transparent; }
+  #calGrid .cal-day { font-size: 0.75rem; color: var(--color-text-muted); padding-left: 0.15rem; }
+  #calGrid .cal-cell.sun .cal-day { color: #d05a5a; }
+  #calGrid .cal-cell.sat .cal-day { color: #5a76d0; }
+  #calGrid .cal-cell.today { border-color: var(--color-primary); background: rgba(46, 74, 138, 0.06); }
+  #calGrid .cal-cell.today .cal-day { color: var(--color-primary-soft); font-weight: 800; }
+  #calGrid .cal-ev {
+    display: flex; align-items: center; gap: 0.2rem; width: 100%; text-align: left;
+    border: none; border-radius: 5px; padding: 3px 5px; cursor: pointer;
+    background: var(--color-primary); color: #fff; font-size: 0.7rem; line-height: 1.3; font-family: inherit;
+  }
+  #calGrid .cal-ev:hover { filter: brightness(1.1); }
+  #calGrid .cal-ev-ic { flex-shrink: 0; }
+  #calGrid .cal-ev-nm { overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  @media (max-width: 560px) {
+    #calGrid .cal-cell { min-height: 60px; }
+    #calGrid .cal-ev-nm { display: none; }
+    #calGrid .cal-ev { justify-content: center; padding: 3px; font-size: 0.8rem; }
   }
 </style>
