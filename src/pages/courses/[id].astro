@@ -20,7 +20,6 @@ const link = (p: string) => `${base.replace(/\/$/, '')}/${p.replace(/^\//, '')}`
 const staffUrl = (id: string) => `${base.replace(/\/$/, '')}/staff/${id}`;
 const yen = (n: number) => '¥' + n.toLocaleString('ja-JP');
 const payable = course.payable && (course.memberPrice > 0 || course.nonMemberPrice > 0);
-const hasPrice = course.memberPrice > 0 || course.nonMemberPrice > 0;
 const publicStaffIds = new Set((await getAuthors()).map((a) => a.id).filter(Boolean));
 ---
 
@@ -65,10 +64,10 @@ const publicStaffIds = new Set((await getAuthors()).map((a) => a.id).filter(Bool
           </div>
         )}
         {course.memberPrice > 0 && (
-          <div class="meta-row"><span>会員価格</span><strong>{yen(course.memberPrice)}</strong></div>
+          <div class="meta-row"><span>会員価格（税込）</span><strong>{yen(course.memberPrice)}</strong></div>
         )}
         {course.nonMemberPrice > 0 && (
-          <div class="meta-row"><span>一般価格</span><strong>{yen(course.nonMemberPrice)}</strong></div>
+          <div class="meta-row"><span>一般価格（税込）</span><strong>{yen(course.nonMemberPrice)}</strong></div>
         )}
         {course.period && (
           <div class="meta-row"><span>期間・時間</span><strong>{course.period}</strong></div>
@@ -107,10 +106,10 @@ const publicStaffIds = new Set((await getAuthors()).map((a) => a.id).filter(Bool
             <h2 class="c-h2">お申し込み</h2>
             <div class="price-preview">
               {course.memberPrice > 0 && (
-                <span class="pp"><b>会員</b>{yen(course.memberPrice)}</span>
+                <span class="pp"><b>会員</b>{yen(course.memberPrice)}<span class="pp-tax">税込</span></span>
               )}
               {course.nonMemberPrice > 0 && (
-                <span class="pp"><b>一般</b>{yen(course.nonMemberPrice)}</span>
+                <span class="pp"><b>一般</b>{yen(course.nonMemberPrice)}<span class="pp-tax">税込</span></span>
               )}
             </div>
 
@@ -136,7 +135,7 @@ const publicStaffIds = new Set((await getAuthors()).map((a) => a.id).filter(Bool
                 <input type="email" id="email" placeholder="example@email.com" autocomplete="email" />
               </div>
               <div class="pay-box">
-                <span>お支払い金額</span>
+                <span>お支払い金額（税込）</span>
                 <strong id="price">—</strong>
               </div>
               <button type="submit" id="submit-btn" class="btn btn-primary submit-btn">
@@ -404,6 +403,12 @@ const publicStaffIds = new Set((await getAuthors()).map((a) => a.id).filter(Bool
     color: var(--color-text-muted);
     margin-right: 0.5rem;
     font-weight: 700;
+  }
+  .pp-tax {
+    font-size: 0.66rem;
+    color: var(--color-text-muted);
+    margin-left: 0.4rem;
+    font-weight: 600;
   }
   .apply-form {
     display: grid;

@@ -207,8 +207,8 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
                 </div>
                 {(c.memberPrice > 0 || c.nonMemberPrice > 0) && (
                   <div class="price-row">
-                    {c.memberPrice > 0 && <span class="price"><b>会員</b>{yen(c.memberPrice)}</span>}
-                    {c.nonMemberPrice > 0 && <span class="price"><b>一般</b>{yen(c.nonMemberPrice)}</span>}
+                    {c.memberPrice > 0 && <span class="price"><b>会員</b>{yen(c.memberPrice)}<span class="tax">税込</span></span>}
+                    {c.nonMemberPrice > 0 && <span class="price"><b>一般</b>{yen(c.nonMemberPrice)}<span class="tax">税込</span></span>}
                   </div>
                 )}
                 <a class="detail-link" href={courseUrl(c.id)}>詳細・お申し込み →</a>
@@ -250,8 +250,8 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
                   </div>
                   {(item.memberPrice > 0 || item.nonMemberPrice > 0) && (
                     <div class="price-row">
-                      {item.memberPrice > 0 && <span class="price"><b>会員</b>{yen(item.memberPrice)}</span>}
-                      {item.nonMemberPrice > 0 && <span class="price"><b>一般</b>{yen(item.nonMemberPrice)}</span>}
+                      {item.memberPrice > 0 && <span class="price"><b>会員</b>{yen(item.memberPrice)}<span class="tax">税込</span></span>}
+                      {item.nonMemberPrice > 0 && <span class="price"><b>一般</b>{yen(item.nonMemberPrice)}<span class="tax">税込</span></span>}
                     </div>
                   )}
                   {item.note && <p class="course-note">※ {item.note}</p>}
@@ -454,6 +454,12 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
     color: var(--color-text-muted);
     margin-right: 0.4rem;
     font-weight: 700;
+  }
+  .price .tax {
+    font-size: 0.62rem;
+    color: var(--color-text-muted);
+    margin-left: 0.3rem;
+    font-weight: 600;
   }
   .badge-note {
     background: transparent;
