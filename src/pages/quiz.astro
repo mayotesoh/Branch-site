@@ -113,21 +113,37 @@ const quizData = await getQuiz();
     });
   }
 
+  const QUIZ_MAX = 10; // 1回の出題数（多い占術はランダム抽出）
+  let shown = []; // いま表示している問題
+  function shuffle(a) {
+    const b = a.slice();
+    for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; }
+    return b;
+  }
   function renderQuestions(art) {
-    const qs = byArt[art] || [];
-    const body = qs.map((q, i) => {
+    const all = byArt[art] || [];
+    shown = all.length > QUIZ_MAX ? shuffle(all).slice(0, QUIZ_MAX) : all.slice();
+    const note = all.length > QUIZ_MAX
+      ? `<p class="quiz-note">全${all.length}問からランダムに${shown.length}問を出題しています。</p>` : '';
+    const body = shown.map((q, i) => {
       const opts = q.choices.map((c, ci) =>
         `<label class="opt"><input type="radio" name="q_${q.id}" value="${ci + 1}" /> <span>${esc(c)}</span></label>`).join('');
       return `<div class="qcard" data-qid="${q.id}"><p class="qnum">Q${i + 1}</p>`
         + `<p class="qtext">${esc(q.q)}</p><div class="opts">${opts}</div>`
         + `<p class="qresult" data-qid="${q.id}"></p></div>`;
     }).join('');
-    quizArea.innerHTML = `<div class="quiz-set"><h2 class="quiz-h">${esc(art)}</h2>${body}`
+    quizArea.innerHTML = `<div class="quiz-set"><h2 class="quiz-h">${esc(art)}</h2>${note}${body}`
       + `<button class="btn btn-primary btn-block quiz-grade" data-art="${esc(art)}">採点する</button>`
       + `<p class="grade-msg" id="gradeMsg" aria-live="polite"></p>`
       + `<div class="grade-result" id="gradeResult"></div></div>`;
     quizArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
+
+  // 別の問題に挑戦（再抽選）
+  quizArea.addEventListener('click', (e) => {
+    const again = e.target.closest('.quiz-again');
+    if (again) { renderQuestions(again.dataset.art); }
+  });
 
   // 採点
   quizArea.addEventListener('click', async (e) => {
@@ -137,7 +153,7 @@ const quizData = await getQuiz();
     const msg = document.getElementById('gradeMsg');
     const answers = {};
     let unanswered = 0;
-    (byArt[art] || []).forEach((q) => {
+    shown.forEach((q) => {
       const sel = quizArea.querySelector(`input[name="q_${q.id}"]:checked`);
       if (sel) answers[q.id] = sel.value; else unanswered++;
     });
@@ -158,7 +174,8 @@ const quizData = await getQuiz();
       document.getElementById('gradeResult').innerHTML =
         `<div class="score-final ${r.passed ? 'passed' : ''}">`
         + `正答 ${r.correct} / ${r.total}　正答率 <strong>${r.rate}%</strong> ${rank}</div>`
-        + (unanswered ? `<p class="grade-note">※ 未回答 ${unanswered}問は採点対象外です。</p>` : '');
+        + (unanswered ? `<p class="grade-note">※ 未回答 ${unanswered}問は採点対象外です。</p>` : '')
+        + `<button class="btn btn-ghost btn-block quiz-again" data-art="${esc(art)}">別の問題に挑戦する</button>`;
       btn.textContent = 'もう一度採点';
       btn.disabled = false;
       loadScores();
@@ -199,7 +216,9 @@ const quizData = await getQuiz();
   .chip.is-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
   .quiz-set { margin-top: 1rem; }
-  .quiz-h { font-size: 1.2rem; color: var(--color-primary-soft); margin-bottom: 1rem; }
+  .quiz-h { font-size: 1.2rem; color: var(--color-primary-soft); margin-bottom: 0.5rem; }
+  .quiz-note { color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 1rem; }
+  .quiz-again { margin-top: 0.8rem; }
   .qcard {
     background: var(--color-surface); border: 1px solid var(--color-border);
     border-radius: 14px; padding: 1.1rem 1.2rem; margin-bottom: 0.9rem;
