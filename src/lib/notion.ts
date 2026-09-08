@@ -59,7 +59,23 @@ if (!token) {
   );
 }
 
-const notion = new Client({ auth: token });
+// Notion APIのレート制限(429)・一時エラー(5xx)を指数バックオフで自動リトライする fetch。
+// ビルドで多数のNotion呼び出しをするため、これが無いとCIで rate_limited により失敗しうる。
+const retryingFetch = async (url: any, init?: any): Promise<any> => {
+  const MAX = 6;
+  for (let i = 0; ; i++) {
+    const res = await fetch(url, init);
+    if ((res.status === 429 || res.status === 502 || res.status === 503) && i < MAX) {
+      const ra = Number(res.headers.get('retry-after'));
+      const waitSec = ra > 0 ? ra : Math.min(2 ** i, 10);
+      await new Promise((r) => setTimeout(r, waitSec * 1000 + Math.random() * 400));
+      continue;
+    }
+    return res;
+  }
+};
+
+const notion = new Client({ auth: token, fetch: retryingFetch as any });
 const n2m = new NotionToMarkdown({ notionClient: notion });
 
 // ---- プロパティ取り出しヘルパー ----
