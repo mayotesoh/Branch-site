@@ -139,59 +139,48 @@ const quizData = await getQuiz();
     const opts = q.choices.map((c, ci) => {
       const v = String(ci + 1);
       const sel = answers[q.id] === v;
-      return `<label class="opt ${sel ? 'sel' : ''}"><input type="radio" name="q_${q.id}" value="${v}" ${sel ? 'checked' : ''}/> <span>${esc(c)}</span></label>`;
+      return `<button class="choice-btn ${sel ? 'sel' : ''}" type="button" data-v="${v}">`
+        + `<span class="choice-number">${v}</span><span class="choice-text">${esc(c)}</span></button>`;
     }).join('');
-    const isLast = idx === total - 1;
-    const prevBtn = idx > 0 ? `<button class="btn btn-ghost q-prev" type="button">← 戻る</button>` : `<span></span>`;
-    const nextBtn = isLast
-      ? `<button class="btn btn-primary q-grade" type="button">採点する</button>`
-      : `<button class="btn btn-primary q-next" type="button">次へ →</button>`;
+    const backBtn = idx > 0 ? `<button class="btn btn-ghost q-prev" type="button">← 前の問題</button>` : '';
     quizArea.innerHTML =
       `<div class="quiz-card">`
       + `<div class="quiz-top"><span class="quiz-count">Q${idx + 1} / ${total}</span><span class="quiz-artname">${esc(quizArt)}</span></div>`
       + `<div class="quiz-bar"><span style="width:${pct}%"></span></div>`
       + `<p class="quiz-q">${esc(q.q)}</p>`
       + `<div class="quiz-opts">${opts}</div>`
+      + `<div class="quiz-nav">${backBtn}</div>`
       + `<p class="grade-msg" id="gradeMsg" aria-live="polite"></p>`
-      + `<div class="quiz-nav">${prevBtn}${nextBtn}</div>`
       + `</div>`;
     quizArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // 選択（ラジオ）
-  quizArea.addEventListener('change', (e) => {
-    const r = e.target.closest('input[type=radio]');
-    if (!r) return;
-    const q = shown[idx];
-    if (q) answers[q.id] = r.value;
-    quizArea.querySelectorAll('.opt').forEach((l) => {
-      const inp = l.querySelector('input');
-      l.classList.toggle('sel', !!(inp && inp.checked));
-    });
-    const m = document.getElementById('gradeMsg'); if (m) m.textContent = '';
-  });
+  let advancing = false;
+  async function gradeAll() {
+    const m = document.getElementById('gradeMsg'); if (m) { m.textContent = '採点中…'; m.className = 'grade-msg'; }
+    try {
+      const r = await postGas({ action: 'quiz_grade', memberNo: creds.no, pin: creds.pin, art: quizArt, answers });
+      if (r.status !== 'ok') { if (m) { m.textContent = r.message || '採点できませんでした。'; m.className = 'grade-msg error'; } return; }
+      renderResult(r); loadScores();
+    } catch (err) { if (m) { m.textContent = '通信に失敗しました。'; m.className = 'grade-msg error'; } }
+  }
 
-  // ナビ・採点・再挑戦
-  quizArea.addEventListener('click', async (e) => {
+  // 選択したら自動で次へ（最後の問題は自動で採点）
+  quizArea.addEventListener('click', (e) => {
+    const choice = e.target.closest('.choice-btn');
+    if (choice) {
+      if (advancing) return;
+      answers[shown[idx].id] = choice.dataset.v;
+      quizArea.querySelectorAll('.choice-btn').forEach((b) => b.classList.toggle('sel', b === choice));
+      advancing = true;
+      setTimeout(() => {
+        advancing = false;
+        if (idx < shown.length - 1) { idx++; renderCard(); }
+        else { gradeAll(); }
+      }, 260);
+      return;
+    }
     if (e.target.closest('.q-prev')) { if (idx > 0) { idx--; renderCard(); } return; }
-    const need = () => { const m = document.getElementById('gradeMsg'); if (m) { m.textContent = '答えを選んでください。'; m.className = 'grade-msg error'; } };
-    if (e.target.closest('.q-next')) {
-      if (!answers[shown[idx].id]) { need(); return; }
-      if (idx < shown.length - 1) { idx++; renderCard(); }
-      return;
-    }
-    const gradeBtn = e.target.closest('.q-grade');
-    if (gradeBtn) {
-      if (!answers[shown[idx].id]) { need(); return; }
-      gradeBtn.disabled = true; gradeBtn.textContent = '採点中…';
-      try {
-        const r = await postGas({ action: 'quiz_grade', memberNo: creds.no, pin: creds.pin, art: quizArt, answers });
-        if (r.status !== 'ok') { const m = document.getElementById('gradeMsg'); if (m) { m.textContent = r.message || '採点できませんでした。'; m.className = 'grade-msg error'; } gradeBtn.disabled = false; gradeBtn.textContent = '採点する'; return; }
-        renderResult(r);
-        loadScores();
-      } catch (err) { const m = document.getElementById('gradeMsg'); if (m) { m.textContent = '通信に失敗しました。'; m.className = 'grade-msg error'; } gradeBtn.disabled = false; gradeBtn.textContent = '採点する'; }
-      return;
-    }
     const again = e.target.closest('.quiz-again');
     if (again) { startQuiz(again.dataset.art); }
   });
@@ -260,17 +249,26 @@ const quizData = await getQuiz();
   .quiz-bar { height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; margin-bottom: 1.2rem; }
   .quiz-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--color-primary-soft), var(--color-primary)); transition: width 0.25s ease; }
   .quiz-q { font-size: 1.15rem; font-weight: 700; line-height: 1.7; margin-bottom: 1.1rem; }
-  .quiz-opts { display: grid; gap: 0.6rem; }
-  .opt {
-    display: flex; gap: 0.7rem; align-items: center;
-    padding: 0.9rem 1rem; border: 2px solid var(--color-border); border-radius: 12px;
-    cursor: pointer; font-size: 1rem; line-height: 1.6; transition: border-color 0.15s, background 0.15s;
+  .quiz-opts { display: grid; gap: 0.7rem; }
+  .choice-btn {
+    display: flex; gap: 0.9rem; align-items: center; text-align: left; width: 100%;
+    padding: 0.95rem 1.1rem; border: 2px solid var(--color-border); border-radius: 12px;
+    background: var(--color-bg-soft); color: var(--color-text);
+    cursor: pointer; font-size: 1.02rem; line-height: 1.6; font-family: inherit;
+    transition: border-color 0.15s, background 0.15s, transform 0.1s;
   }
-  .opt:hover { border-color: var(--color-primary); }
-  .opt.sel { border-color: var(--color-primary); background: rgba(46, 74, 138, 0.06); }
-  .opt input { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--color-primary); }
-  .quiz-nav { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; margin-top: 1.3rem; }
-  .quiz-nav .btn { min-width: 44%; }
+  .choice-btn:hover { border-color: var(--color-primary); }
+  .choice-btn:active { transform: scale(0.99); }
+  .choice-btn.sel { border-color: var(--color-primary); background: rgba(46, 74, 138, 0.1); color: var(--color-primary-soft); font-weight: 700; }
+  .choice-number {
+    flex-shrink: 0; display: inline-flex; align-items: center; justify-content: center;
+    width: 30px; height: 30px; border-radius: 50%;
+    background: var(--color-surface); border: 2px solid currentColor;
+    font-size: 0.9rem; font-weight: 800;
+  }
+  .choice-text { flex: 1; }
+  .quiz-nav { display: flex; justify-content: flex-start; margin-top: 1.2rem; min-height: 1px; }
+  .quiz-nav .btn { font-size: 0.85rem; padding: 0.4rem 1rem; }
   .grade-msg { text-align: center; font-size: 0.88rem; min-height: 1em; margin-top: 0.6rem; }
   .grade-msg.error { color: #d33; }
   .btn-block { width: 100%; margin-top: 0.5rem; }
