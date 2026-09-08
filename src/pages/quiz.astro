@@ -102,85 +102,118 @@ const quizData = await getQuiz();
     } catch (e) {}
   }
 
-  // 占術選択→出題
-  if (artPicker) {
-    artPicker.addEventListener('click', (e) => {
-      const btn = e.target.closest('.chip');
-      if (!btn) return;
-      const art = btn.dataset.art;
-      Array.from(artPicker.querySelectorAll('.chip')).forEach((c) => c.classList.toggle('is-active', c === btn));
-      renderQuestions(art);
-    });
-  }
-
-  const QUIZ_MAX = 10; // 1回の出題数（多い占術はランダム抽出）
-  let shown = []; // いま表示している問題
+  // ===== 1問ずつ出題 → 最後にまとめて採点 =====
+  const QUIZ_MAX = 10; // 1回の出題数
+  let quizArt = '';
+  let shown = [];      // 出題中の問題
+  let idx = 0;         // 現在の問題番号
+  const answers = {};  // qId -> '1'..'4'
   function shuffle(a) {
     const b = a.slice();
     for (let i = b.length - 1; i > 0; i--) { const j = Math.floor(Math.random() * (i + 1)); [b[i], b[j]] = [b[j], b[i]]; }
     return b;
   }
-  function renderQuestions(art) {
+
+  if (artPicker) {
+    artPicker.addEventListener('click', (e) => {
+      const btn = e.target.closest('.chip');
+      if (!btn) return;
+      Array.from(artPicker.querySelectorAll('.chip')).forEach((c) => c.classList.toggle('is-active', c === btn));
+      startQuiz(btn.dataset.art);
+    });
+  }
+
+  function startQuiz(art) {
+    quizArt = art;
     const all = byArt[art] || [];
-    shown = all.length > QUIZ_MAX ? shuffle(all).slice(0, QUIZ_MAX) : all.slice();
-    const note = all.length > QUIZ_MAX
-      ? `<p class="quiz-note">全${all.length}問からランダムに${shown.length}問を出題しています。</p>` : '';
-    const body = shown.map((q, i) => {
-      const opts = q.choices.map((c, ci) =>
-        `<label class="opt"><input type="radio" name="q_${q.id}" value="${ci + 1}" /> <span>${esc(c)}</span></label>`).join('');
-      return `<div class="qcard" data-qid="${q.id}"><p class="qnum">Q${i + 1}</p>`
-        + `<p class="qtext">${esc(q.q)}</p><div class="opts">${opts}</div>`
-        + `<p class="qresult" data-qid="${q.id}"></p></div>`;
+    shown = shuffle(all).slice(0, QUIZ_MAX);
+    idx = 0;
+    Object.keys(answers).forEach((k) => delete answers[k]);
+    renderCard();
+  }
+
+  function renderCard() {
+    const total = shown.length;
+    const q = shown[idx];
+    const pct = Math.round(((idx + 1) / total) * 100);
+    const opts = q.choices.map((c, ci) => {
+      const v = String(ci + 1);
+      const sel = answers[q.id] === v;
+      return `<label class="opt ${sel ? 'sel' : ''}"><input type="radio" name="q_${q.id}" value="${v}" ${sel ? 'checked' : ''}/> <span>${esc(c)}</span></label>`;
     }).join('');
-    quizArea.innerHTML = `<div class="quiz-set"><h2 class="quiz-h">${esc(art)}</h2>${note}${body}`
-      + `<button class="btn btn-primary btn-block quiz-grade" data-art="${esc(art)}">採点する</button>`
+    const isLast = idx === total - 1;
+    const prevBtn = idx > 0 ? `<button class="btn btn-ghost q-prev" type="button">← 戻る</button>` : `<span></span>`;
+    const nextBtn = isLast
+      ? `<button class="btn btn-primary q-grade" type="button">採点する</button>`
+      : `<button class="btn btn-primary q-next" type="button">次へ →</button>`;
+    quizArea.innerHTML =
+      `<div class="quiz-card">`
+      + `<div class="quiz-top"><span class="quiz-count">Q${idx + 1} / ${total}</span><span class="quiz-artname">${esc(quizArt)}</span></div>`
+      + `<div class="quiz-bar"><span style="width:${pct}%"></span></div>`
+      + `<p class="quiz-q">${esc(q.q)}</p>`
+      + `<div class="quiz-opts">${opts}</div>`
       + `<p class="grade-msg" id="gradeMsg" aria-live="polite"></p>`
-      + `<div class="grade-result" id="gradeResult"></div></div>`;
+      + `<div class="quiz-nav">${prevBtn}${nextBtn}</div>`
+      + `</div>`;
     quizArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
   }
 
-  // 別の問題に挑戦（再抽選）
-  quizArea.addEventListener('click', (e) => {
-    const again = e.target.closest('.quiz-again');
-    if (again) { renderQuestions(again.dataset.art); }
+  // 選択（ラジオ）
+  quizArea.addEventListener('change', (e) => {
+    const r = e.target.closest('input[type=radio]');
+    if (!r) return;
+    const q = shown[idx];
+    if (q) answers[q.id] = r.value;
+    quizArea.querySelectorAll('.opt').forEach((l) => {
+      const inp = l.querySelector('input');
+      l.classList.toggle('sel', !!(inp && inp.checked));
+    });
+    const m = document.getElementById('gradeMsg'); if (m) m.textContent = '';
   });
 
-  // 採点
+  // ナビ・採点・再挑戦
   quizArea.addEventListener('click', async (e) => {
-    const btn = e.target.closest('.quiz-grade');
-    if (!btn) return;
-    const art = btn.dataset.art;
-    const msg = document.getElementById('gradeMsg');
-    const answers = {};
-    let unanswered = 0;
-    shown.forEach((q) => {
-      const sel = quizArea.querySelector(`input[name="q_${q.id}"]:checked`);
-      if (sel) answers[q.id] = sel.value; else unanswered++;
-    });
-    if (Object.keys(answers).length === 0) { msg.textContent = '回答を選んでください。'; msg.className = 'grade-msg error'; return; }
-    btn.disabled = true; btn.textContent = '採点中…'; msg.textContent = '';
-    try {
-      const r = await postGas({ action: 'quiz_grade', memberNo: creds.no, pin: creds.pin, art, answers });
-      if (r.status !== 'ok') { msg.textContent = r.message || '採点できませんでした。'; msg.className = 'grade-msg error'; btn.disabled = false; btn.textContent = '採点する'; return; }
-      // 各問に○×＋解説
-      (r.results || []).forEach((res) => {
-        const el = quizArea.querySelector(`.qresult[data-qid="${res.id}"]`);
-        const card = quizArea.querySelector(`.qcard[data-qid="${res.id}"]`);
-        if (card) card.classList.add(res.correct ? 'is-correct' : 'is-wrong');
-        if (el) el.innerHTML = `${res.correct ? '⭕ 正解' : '❌ 不正解（正解：' + esc(res.answer) + '）'}`
-          + (res.explain ? `<span class="qexp">${esc(res.explain)}</span>` : '');
-      });
-      const rank = r.passed ? '🎓 今週の合格！' : '';
-      document.getElementById('gradeResult').innerHTML =
-        `<div class="score-final ${r.passed ? 'passed' : ''}">`
-        + `正答 ${r.correct} / ${r.total}　正答率 <strong>${r.rate}%</strong> ${rank}</div>`
-        + (unanswered ? `<p class="grade-note">※ 未回答 ${unanswered}問は採点対象外です。</p>` : '')
-        + `<button class="btn btn-ghost btn-block quiz-again" data-art="${esc(art)}">別の問題に挑戦する</button>`;
-      btn.textContent = 'もう一度採点';
-      btn.disabled = false;
-      loadScores();
-    } catch (err) { msg.textContent = '通信に失敗しました。'; msg.className = 'grade-msg error'; btn.disabled = false; btn.textContent = '採点する'; }
+    if (e.target.closest('.q-prev')) { if (idx > 0) { idx--; renderCard(); } return; }
+    const need = () => { const m = document.getElementById('gradeMsg'); if (m) { m.textContent = '答えを選んでください。'; m.className = 'grade-msg error'; } };
+    if (e.target.closest('.q-next')) {
+      if (!answers[shown[idx].id]) { need(); return; }
+      if (idx < shown.length - 1) { idx++; renderCard(); }
+      return;
+    }
+    const gradeBtn = e.target.closest('.q-grade');
+    if (gradeBtn) {
+      if (!answers[shown[idx].id]) { need(); return; }
+      gradeBtn.disabled = true; gradeBtn.textContent = '採点中…';
+      try {
+        const r = await postGas({ action: 'quiz_grade', memberNo: creds.no, pin: creds.pin, art: quizArt, answers });
+        if (r.status !== 'ok') { const m = document.getElementById('gradeMsg'); if (m) { m.textContent = r.message || '採点できませんでした。'; m.className = 'grade-msg error'; } gradeBtn.disabled = false; gradeBtn.textContent = '採点する'; return; }
+        renderResult(r);
+        loadScores();
+      } catch (err) { const m = document.getElementById('gradeMsg'); if (m) { m.textContent = '通信に失敗しました。'; m.className = 'grade-msg error'; } gradeBtn.disabled = false; gradeBtn.textContent = '採点する'; }
+      return;
+    }
+    const again = e.target.closest('.quiz-again');
+    if (again) { startQuiz(again.dataset.art); }
   });
+
+  function renderResult(r) {
+    const byId = {}; (r.results || []).forEach((x) => (byId[x.id] = x));
+    const rank = r.passed ? '🎓 今週の合格！' : '';
+    const review = shown.map((q, i) => {
+      const res = byId[q.id]; if (!res) return '';
+      const ansText = q.choices[Number(res.answer) - 1] || res.answer;
+      return `<div class="rv ${res.correct ? 'ok' : 'ng'}"><p class="rv-q">Q${i + 1}. ${esc(q.q)}</p>`
+        + `<p class="rv-a">${res.correct ? '⭕ 正解' : '❌ 不正解'}（正解：${esc(ansText)}）</p>`
+        + (res.explain ? `<p class="rv-e">${esc(res.explain)}</p>` : '') + `</div>`;
+    }).join('');
+    quizArea.innerHTML =
+      `<div class="quiz-result">`
+      + `<div class="score-final ${r.passed ? 'passed' : ''}">正答 ${r.correct} / ${r.total}　正答率 <strong>${r.rate}%</strong> ${rank}</div>`
+      + `<h3 class="rv-h">解説</h3>${review}`
+      + `<button class="btn btn-primary btn-block quiz-again" data-art="${esc(quizArt)}">別の問題に挑戦する</button>`
+      + `</div>`;
+    quizArea.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  }
 </script>
 
 <style>
@@ -215,38 +248,52 @@ const quizData = await getQuiz();
   .chip:hover { border-color: var(--color-primary); color: var(--color-primary-soft); }
   .chip.is-active { background: var(--color-primary); border-color: var(--color-primary); color: #fff; }
 
-  .quiz-set { margin-top: 1rem; }
-  .quiz-h { font-size: 1.2rem; color: var(--color-primary-soft); margin-bottom: 0.5rem; }
-  .quiz-note { color: var(--color-text-muted); font-size: 0.85rem; margin-bottom: 1rem; }
-  .quiz-again { margin-top: 0.8rem; }
-  .qcard {
+  /* 1問カード */
+  .quiz-card {
     background: var(--color-surface); border: 1px solid var(--color-border);
-    border-radius: 14px; padding: 1.1rem 1.2rem; margin-bottom: 0.9rem;
+    border-radius: 16px; padding: 1.4rem 1.4rem 1.2rem; margin-top: 1rem;
+    box-shadow: 0 8px 26px rgba(26, 36, 64, 0.08);
   }
-  .qcard.is-correct { border-color: #06a047; }
-  .qcard.is-wrong { border-color: #d33; }
-  .qnum { font-size: 0.78rem; font-weight: 800; color: var(--color-accent-soft); }
-  .qtext { font-weight: 700; line-height: 1.6; margin: 0.3rem 0 0.8rem; }
-  .opts { display: grid; gap: 0.5rem; }
+  .quiz-top { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 0.5rem; }
+  .quiz-count { font-weight: 800; color: var(--color-primary-soft); font-size: 0.95rem; }
+  .quiz-artname { font-size: 0.8rem; color: var(--color-text-muted); }
+  .quiz-bar { height: 6px; border-radius: 999px; background: var(--color-border); overflow: hidden; margin-bottom: 1.2rem; }
+  .quiz-bar span { display: block; height: 100%; background: linear-gradient(90deg, var(--color-primary-soft), var(--color-primary)); transition: width 0.25s ease; }
+  .quiz-q { font-size: 1.15rem; font-weight: 700; line-height: 1.7; margin-bottom: 1.1rem; }
+  .quiz-opts { display: grid; gap: 0.6rem; }
   .opt {
-    display: flex; gap: 0.6rem; align-items: flex-start;
-    padding: 0.6rem 0.8rem; border: 1px solid var(--color-border); border-radius: 10px;
-    cursor: pointer; font-size: 0.93rem; line-height: 1.6;
+    display: flex; gap: 0.7rem; align-items: center;
+    padding: 0.9rem 1rem; border: 2px solid var(--color-border); border-radius: 12px;
+    cursor: pointer; font-size: 1rem; line-height: 1.6; transition: border-color 0.15s, background 0.15s;
   }
   .opt:hover { border-color: var(--color-primary); }
-  .opt input { margin-top: 0.25rem; }
-  .qresult { margin-top: 0.6rem; font-size: 0.88rem; font-weight: 700; }
-  .qresult:empty { margin-top: 0; }
-  .qexp { display: block; font-weight: 400; color: var(--color-text-muted); font-size: 0.86rem; line-height: 1.8; margin-top: 0.3rem; }
-  .btn-block { width: 100%; margin-top: 0.5rem; }
-  .grade-msg { text-align: center; font-size: 0.88rem; min-height: 1em; }
+  .opt.sel { border-color: var(--color-primary); background: rgba(46, 74, 138, 0.06); }
+  .opt input { width: 18px; height: 18px; flex-shrink: 0; accent-color: var(--color-primary); }
+  .quiz-nav { display: flex; justify-content: space-between; align-items: center; gap: 0.8rem; margin-top: 1.3rem; }
+  .quiz-nav .btn { min-width: 44%; }
+  .grade-msg { text-align: center; font-size: 0.88rem; min-height: 1em; margin-top: 0.6rem; }
   .grade-msg.error { color: #d33; }
+  .btn-block { width: 100%; margin-top: 0.5rem; }
+
+  /* 結果 */
+  .quiz-result { margin-top: 1rem; }
   .score-final {
-    text-align: center; margin-top: 1rem; padding: 1rem;
-    background: var(--color-bg-soft); border: 1px solid var(--color-border); border-radius: 12px;
-    font-size: 1.05rem;
+    text-align: center; padding: 1.2rem;
+    background: var(--color-bg-soft); border: 1px solid var(--color-border); border-radius: 14px;
+    font-size: 1.05rem; margin-bottom: 1.4rem;
   }
-  .score-final strong { color: var(--color-primary-soft); font-size: 1.3rem; }
+  .score-final strong { color: var(--color-primary-soft); font-size: 1.5rem; }
   .score-final.passed { border-color: var(--color-accent); }
-  .grade-note { text-align: center; color: var(--color-text-muted); font-size: 0.82rem; margin-top: 0.5rem; }
+  .rv-h { font-size: 1.05rem; color: var(--color-primary-soft); margin: 0.5rem 0 0.8rem; }
+  .rv {
+    background: var(--color-surface); border: 1px solid var(--color-border);
+    border-left: 4px solid var(--color-border); border-radius: 12px; padding: 0.9rem 1.1rem; margin-bottom: 0.7rem;
+  }
+  .rv.ok { border-left-color: #06a047; }
+  .rv.ng { border-left-color: #d33; }
+  .rv-q { font-weight: 700; line-height: 1.6; }
+  .rv-a { font-size: 0.9rem; font-weight: 700; margin-top: 0.4rem; }
+  .rv.ok .rv-a { color: #06a047; }
+  .rv.ng .rv-a { color: #d33; }
+  .rv-e { color: var(--color-text-muted); font-size: 0.88rem; line-height: 1.8; margin-top: 0.4rem; }
 </style>
