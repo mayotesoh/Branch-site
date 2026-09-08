@@ -1,7 +1,7 @@
 ---
 import Layout from '../layouts/Layout.astro';
 import { GAS_URL, LINE_URL, SISTER_SITE_URL, SISTER_SITE_NAME } from '../consts';
-import { getEvents, getThemes } from '../lib/notion';
+import { getEvents, getThemes, getMemberArtOptions } from '../lib/notion';
 
 // これから（今日以降）のイベントを予約・出席用に埋め込む
 const _t = new Date();
@@ -24,6 +24,7 @@ const memberTheme = _cur ? { id: _cur.pageId, title: _cur.title, desc: _cur.desc
 
 const _base = import.meta.env.BASE_URL;
 const quizUrl = `${_base.replace(/\/$/, '')}/quiz`;
+const artOptions = await getMemberArtOptions();
 ---
 
 <Layout
@@ -83,7 +84,7 @@ const quizUrl = `${_base.replace(/\/$/, '')}/quiz`;
   </section>
 </Layout>
 
-<script define:vars={{ GAS_URL, memberEvents, memberTheme, quizUrl, SISTER_SITE_URL, SISTER_SITE_NAME }} is:inline>
+<script define:vars={{ GAS_URL, memberEvents, memberTheme, quizUrl, artOptions, SISTER_SITE_URL, SISTER_SITE_NAME }} is:inline>
   const loginBox = document.getElementById('login');
   const dash = document.getElementById('dash');
   const form = document.getElementById('login-form');
@@ -191,6 +192,31 @@ const quizUrl = `${_base.replace(/\/$/, '')}/quiz`;
       + `${inner}</div>`;
   }
 
+  // 対応占術（会員が自分で設定・保存できる）
+  function artsBlock(arts) {
+    const cur = Array.isArray(arts) ? arts : [];
+    const set = {};
+    cur.forEach((a) => { set[a] = true; });
+    // 会員DBの選択肢＋会員が持っている独自値もチェック候補に
+    const opts = (Array.isArray(artOptions) ? artOptions : []).slice();
+    cur.forEach((a) => { if (opts.indexOf(a) === -1) opts.push(a); });
+    const checks = opts.map((o) =>
+      `<label class="art-opt"><input type="checkbox" value="${esc(o)}" ${set[o] ? 'checked' : ''}/> <span>${esc(o)}</span></label>`
+    ).join('');
+    return `<div class="block">`
+      + `<h2 class="block-h">対応占術 <button class="btn-xs" id="artsEditToggle" type="button">編集</button></h2>`
+      + `<div class="chip-row" id="artsView">${chips(cur, 'chip-art')}</div>`
+      + `<div class="arts-edit" id="artsEdit" hidden>`
+      + `<p class="arts-hint">あなたが対応できる占術にチェックしてください（複数可）。</p>`
+      + `<div class="art-opts">${checks}</div>`
+      + `<label class="arts-other">その他（カンマ区切りで追加）`
+      + `<input type="text" id="artsOther" placeholder="例：レイキ, 数秘術" autocomplete="off" /></label>`
+      + `<div class="arts-actions"><button class="btn btn-primary btn-sm" id="artsSave" type="button">保存する</button>`
+      + `<button class="btn btn-ghost btn-sm" id="artsCancel" type="button">キャンセル</button></div>`
+      + `<p class="arts-msg" id="artsMsg" aria-live="polite"></p>`
+      + `</div></div>`;
+  }
+
   // 今週の題材への読み解き投稿
   function themeBlock() {
     if (!memberTheme) return '';
@@ -283,10 +309,7 @@ const quizUrl = `${_base.replace(/\/$/, '')}/quiz`;
         <span class="quiz-cta-sub">占術別・毎週チャレンジ／80%で合格 →</span>
       </a>
 
-      <div class="block">
-        <h2 class="block-h">対応占術</h2>
-        <div class="chip-row">${chips(d.arts, 'chip-art')}</div>
-      </div>
+      ${artsBlock(d.arts)}
 
       ${stampBlock(d.stamps)}
 
@@ -337,6 +360,39 @@ const quizUrl = `${_base.replace(/\/$/, '')}/quiz`;
       }
     } catch (e) {}
   }
+
+  // 対応占術の編集・保存
+  dash.addEventListener('click', async (e) => {
+    if (e.target.closest('#artsEditToggle')) {
+      const ed = document.getElementById('artsEdit');
+      const vw = document.getElementById('artsView');
+      if (ed) ed.hidden = false;
+      if (vw) vw.hidden = true;
+      return;
+    }
+    if (e.target.closest('#artsCancel')) {
+      const ed = document.getElementById('artsEdit');
+      const vw = document.getElementById('artsView');
+      if (ed) ed.hidden = true;
+      if (vw) vw.hidden = false;
+      return;
+    }
+    const saveBtn = e.target.closest('#artsSave');
+    if (!saveBtn) return;
+    const msgEl = document.getElementById('artsMsg');
+    const setMsg = (t, ok) => { if (msgEl) { msgEl.textContent = t; msgEl.className = 'arts-msg ' + (ok ? 'ok' : 'error'); } };
+    if (!creds) { setMsg('再ログインしてください。', false); return; }
+    const checked = Array.from(document.querySelectorAll('#artsEdit .art-opt input:checked')).map((i) => i.value);
+    const otherEl = document.getElementById('artsOther');
+    const others = otherEl ? otherEl.value.split(/[,、]/).map((s) => s.trim()).filter(Boolean) : [];
+    const arts = Array.from(new Set(checked.concat(others))).slice(0, 30);
+    saveBtn.disabled = true; saveBtn.textContent = '保存中…';
+    try {
+      const r = await postGas({ action: 'member_update_arts', memberNo: creds.no, pin: creds.pin, arts });
+      if (r.status === 'ok') { setMsg('保存しました！', true); await refreshDash(); }
+      else { setMsg(r.message || '保存できませんでした。', false); saveBtn.disabled = false; saveBtn.textContent = '保存する'; }
+    } catch (err) { setMsg('通信に失敗しました。', false); saveBtn.disabled = false; saveBtn.textContent = '保存する'; }
+  });
 
   // 今週の題材への読み解き投稿
   dash.addEventListener('click', async (e) => {
@@ -539,6 +595,33 @@ const quizUrl = `${_base.replace(/\/$/, '')}/quiz`;
   #dash .chip-title { border-color: var(--color-accent); color: var(--color-accent-soft); }
   #dash .chip-cert { color: var(--color-primary-soft); }
   #dash .chip-art { border-color: var(--color-primary); color: var(--color-primary-soft); }
+
+  /* 対応占術の編集 */
+  #dash .btn-xs {
+    font-size: 0.72rem; font-weight: 700; padding: 0.1rem 0.6rem; margin-left: 0.5rem;
+    border: 1px solid var(--color-primary); border-radius: 999px;
+    background: var(--color-surface); color: var(--color-primary-soft); cursor: pointer;
+  }
+  #dash .btn-xs:hover { background: var(--color-primary); color: #fff; }
+  #dash .arts-edit {
+    margin-top: 0.8rem; padding: 1rem 1.1rem;
+    background: var(--color-bg-soft); border: 1px solid var(--color-border); border-radius: 12px;
+  }
+  #dash .arts-hint { font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.8rem; }
+  #dash .art-opts {
+    display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 0.4rem 0.8rem;
+  }
+  #dash .art-opt { display: flex; align-items: center; gap: 0.4rem; font-size: 0.88rem; cursor: pointer; }
+  #dash .art-opt input { width: 16px; height: 16px; }
+  #dash .arts-other { display: block; margin-top: 0.9rem; font-size: 0.85rem; color: var(--color-text-muted); }
+  #dash .arts-other input {
+    display: block; width: 100%; margin-top: 0.3rem; padding: 0.5rem 0.7rem;
+    border: 1px solid var(--color-border); border-radius: 8px; background: var(--color-bg); color: var(--color-text);
+  }
+  #dash .arts-actions { display: flex; gap: 0.6rem; margin-top: 1rem; }
+  #dash .arts-msg { font-size: 0.82rem; margin-top: 0.5rem; min-height: 1em; }
+  #dash .arts-msg.ok { color: #06a047; }
+  #dash .arts-msg.error { color: #d33; }
   #dash .chip-empty { color: var(--color-text-muted); font-size: 0.88rem; }
 
   /* 参加スタンプ */

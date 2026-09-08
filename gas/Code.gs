@@ -88,6 +88,10 @@ function doPost(e) {
     if (data && data.action === 'quiz_grade') {
       return handleQuizGrade(data); // MemberPortal.gs
     }
+    // (M) 対応占術の更新（会員が自分で設定）
+    if (data && data.action === 'member_update_arts') {
+      return handleMemberUpdateArts(data); // MemberPortal.gs
+    }
 
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);

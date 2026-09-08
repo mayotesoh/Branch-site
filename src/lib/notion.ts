@@ -32,6 +32,23 @@ export const EVENT_DB = '3a776a170aae814d8066e4c4161e9961';
 export const THEME_DB = '3d276a170aae81c2a286d911351cf3dc';
 export const THEME_ANSWER_DB = '3d276a170aae81c28f3acf6a1b4f0eb8';
 export const QUIZ_DB = '3d276a170aae819fb797f0aad61dfac1';
+export const MEMBER_DB = 'ca1b82cb-70c3-4995-b15b-362181c387cd';
+
+let _memberArtOptions: Promise<string[]> | null = null;
+/** 会員DB「占術」マルチセレクトの選択肢（会員ページの自己設定用） */
+export function getMemberArtOptions(): Promise<string[]> {
+  if (!_memberArtOptions) {
+    _memberArtOptions = (async () => {
+      try {
+        const db: any = await notion.databases.retrieve({ database_id: MEMBER_DB });
+        return (db.properties?.['占術']?.multi_select?.options ?? []).map((o: any) => o.name);
+      } catch {
+        return [];
+      }
+    })();
+  }
+  return _memberArtOptions;
+}
 
 const token =
   (import.meta.env as any).NOTION_TOKEN ?? process.env.NOTION_TOKEN;

@@ -376,6 +376,26 @@ function handleMonitorApply(data) {
 }
 
 /**
+ * 対応占術の更新（member_update_arts）：会員が自分の占術を設定
+ * @param {{memberNo:string, pin:string, arts:string[]}} data
+ */
+function handleMemberUpdateArts(data) {
+  const hit = mpFindMember_(data.memberNo, data.pin);
+  const raw = Array.isArray(data.arts) ? data.arts : [];
+  // 整形：前後空白除去・空除去・重複除去・30件/各50文字まで
+  const seen = {};
+  const arts = [];
+  raw.forEach(function (a) {
+    const s = String(a || '').trim().slice(0, 50);
+    if (s && !seen[s]) { seen[s] = true; arts.push(s); }
+  });
+  cpApi_('pages/' + hit.id, 'patch', {
+    properties: { '占術': { multi_select: arts.slice(0, 30).map(function (n) { return { name: n }; }) } },
+  });
+  return jsonOutput({ status: 'ok', arts: arts });
+}
+
+/**
  * 会員ログイン（member_login）
  * @param {{memberNo:string, pin:string}} data
  */
