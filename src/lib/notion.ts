@@ -89,6 +89,20 @@ const pFile = (p: any) => {
   const f = (p?.files ?? [])[0];
   return f ? f.external?.url ?? f.file?.url ?? '' : '';
 };
+// files プロパティ → { src, caption }[]（ギャラリー用）。
+// caption はファイル名。IMG_1234 等のカメラ既定名は空にする（＝キャプション非表示）。
+const pGallery = (p: any) =>
+  (p?.files ?? [])
+    .map((f: any) => {
+      const url = f.external?.url ?? f.file?.url ?? '';
+      const raw = String(f.name ?? '').replace(/\.[a-z0-9]+$/i, '').trim();
+      const junky =
+        /^(img|dsc|image|photo|mvimg|pxl|screenshot|line_album)[ _-]?.*$/i.test(raw) ||
+        /^[0-9a-f]{8,}$/i.test(raw) ||
+        /^\d[\d_.-]*$/.test(raw);
+      return { src: localizeImage(url), caption: junky ? '' : raw };
+    })
+    .filter((g: any) => g.src);
 const pRelIds = (p: any) => (p?.relation ?? []).map((r: any) => r.id);
 
 // ---- 型 ----
@@ -100,6 +114,7 @@ export interface Author {
   role: string;
   image: string;
   arts: string[];
+  gallery: { src: string; caption: string }[];
   sns: {
     instagram: string;
     facebook: string;
@@ -164,6 +179,7 @@ export function getAuthors(): Promise<Author[]> {
           role: pText(p['肩書き']),
           image: localizeImage(pFile(p['顔写真'])),
           arts: pMulti(p['占術']),
+          gallery: pGallery(p['ギャラリー']),
           sns: {
             instagram: withProto(p['Instagram']?.url),
             facebook: withProto(p['Facebook']?.url),
