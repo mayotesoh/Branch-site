@@ -9,6 +9,13 @@ const fmtDate = (d: Date) =>
   `${d.getFullYear()}年${d.getMonth() + 1}月${d.getDate()}日`;
 
 const posts = await getPosts();
+
+// タグを出現数の多い順に集計（絞り込みバー用）
+const tagCounts = new Map<string, number>();
+posts.forEach((p) => p.tags.forEach((t) => tagCounts.set(t, (tagCounts.get(t) ?? 0) + 1)));
+const allTags = [...tagCounts.entries()].sort(
+  (a, b) => b[1] - a[1] || a[0].localeCompare(b[0], 'ja')
+);
 ---
 
 <Layout
@@ -20,13 +27,26 @@ const posts = await getPosts();
       <h1 class="section-title">ブログ</h1>
       <p class="section-lead">Fortune Laboの占い師が綴る、学びと気づき</p>
 
+      {allTags.length > 0 && (
+        <div class="tag-filter" id="tagFilter" role="group" aria-label="タグで絞り込み">
+          <button class="tag-btn is-active" type="button" data-tag="">
+            すべて<span class="tag-c">{posts.length}</span>
+          </button>
+          {allTags.map(([tag, count]) => (
+            <button class="tag-btn" type="button" data-tag={tag}>
+              #{tag}<span class="tag-c">{count}</span>
+            </button>
+          ))}
+        </div>
+      )}
+
       {
         posts.length === 0 ? (
           <p class="empty">まだ記事がありません。</p>
         ) : (
-          <ul class="post-list">
+          <ul class="post-list" id="postList">
             {posts.map((post) => (
-              <li class="post-card">
+              <li class="post-card" data-tags={post.tags.join(',')}>
                 <a class="post-link" href={link(`/blog/${post.slug}`)}>
                   {post.cover && (
                     <div class="post-cover">
@@ -56,14 +76,80 @@ const posts = await getPosts();
           </ul>
         )
       }
+      <p class="empty" id="noMatch" hidden>このタグの記事はまだありません。</p>
     </div>
   </section>
+
+  <script>
+    const filter = document.getElementById('tagFilter');
+    const list = document.getElementById('postList');
+    const noMatch = document.getElementById('noMatch');
+    if (filter && list) {
+      const cards = Array.from(list.querySelectorAll('.post-card'));
+      filter.addEventListener('click', (e) => {
+        const btn = (e.target as HTMLElement).closest('.tag-btn') as HTMLElement | null;
+        if (!btn) return;
+        const tag = btn.getAttribute('data-tag') || '';
+        filter.querySelectorAll('.tag-btn').forEach((b) => b.classList.toggle('is-active', b === btn));
+        let shown = 0;
+        cards.forEach((c) => {
+          const tags = (c.getAttribute('data-tags') || '').split(',').filter(Boolean);
+          const match = !tag || tags.includes(tag);
+          (c as HTMLElement).hidden = !match;
+          if (match) shown++;
+        });
+        if (noMatch) (noMatch as HTMLElement).hidden = shown !== 0;
+      });
+    }
+  </script>
 </Layout>
 
 <style>
   .empty {
     text-align: center;
     color: var(--color-text-muted);
+  }
+  .tag-filter {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    justify-content: center;
+    max-width: 760px;
+    margin: 0 auto 2rem;
+  }
+  .tag-btn {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-family: inherit;
+    font-size: 0.85rem;
+    cursor: pointer;
+    padding: 0.35rem 0.85rem;
+    border-radius: 999px;
+    border: 1px solid var(--color-border);
+    background: var(--color-surface);
+    color: var(--color-text-muted);
+    transition: background 0.15s ease, color 0.15s ease, border-color 0.15s ease;
+  }
+  .tag-btn:hover {
+    border-color: var(--color-accent);
+    color: var(--color-accent);
+  }
+  .tag-btn.is-active {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+  }
+  .tag-c {
+    font-size: 0.72rem;
+    font-variant-numeric: tabular-nums;
+    opacity: 0.75;
+  }
+  .tag-btn.is-active .tag-c {
+    opacity: 0.9;
+  }
+  .post-card[hidden] {
+    display: none;
   }
   .post-list {
     list-style: none;
