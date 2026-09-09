@@ -91,16 +91,19 @@ const pFile = (p: any) => {
 };
 // files プロパティ → { src, caption }[]（ギャラリー用）。
 // caption はファイル名。IMG_1234 等のカメラ既定名は空にする（＝キャプション非表示）。
+const VIDEO_EXT = ['.mp4', '.webm', '.mov', '.m4v', '.ogg', '.ogv'];
 const pGallery = (p: any) =>
   (p?.files ?? [])
     .map((f: any) => {
       const url = f.external?.url ?? f.file?.url ?? '';
       const raw = String(f.name ?? '').replace(/\.[a-z0-9]+$/i, '').trim();
       const junky =
-        /^(img|dsc|image|photo|mvimg|pxl|screenshot|line_album)[ _-]?.*$/i.test(raw) ||
+        /^(img|dsc|image|photo|mvimg|pxl|screenshot|line_album|movie|video|vid)[ _-]?.*$/i.test(raw) ||
         /^[0-9a-f]{8,}$/i.test(raw) ||
         /^\d[\d_.-]*$/.test(raw);
-      return { src: localizeImage(url), caption: junky ? '' : raw };
+      const ext = url.split('?')[0].slice(url.split('?')[0].lastIndexOf('.')).toLowerCase();
+      const kind: 'image' | 'video' = VIDEO_EXT.includes(ext) ? 'video' : 'image';
+      return { src: localizeImage(url), caption: junky ? '' : raw, kind };
     })
     .filter((g: any) => g.src);
 const pRelIds = (p: any) => (p?.relation ?? []).map((r: any) => r.id);
@@ -114,7 +117,7 @@ export interface Author {
   role: string;
   image: string;
   arts: string[];
-  gallery: { src: string; caption: string }[];
+  gallery: { src: string; caption: string; kind: 'image' | 'video' }[];
   sns: {
     instagram: string;
     facebook: string;

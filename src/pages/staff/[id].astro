@@ -94,9 +94,13 @@ const hasSns = SNS.some((s) => (m.sns as any)[s.key]);
               {m.gallery.map((g, i) => (
                 <li class="g-item">
                   <figure>
-                    <a href={g.src} target="_blank" rel="noopener noreferrer">
-                      <img src={g.src} loading="lazy" alt={g.caption || `${m.name}のギャラリー画像 ${i + 1}`} />
-                    </a>
+                    {g.kind === 'video' ? (
+                      <video src={g.src} controls preload="metadata" playsinline></video>
+                    ) : (
+                      <a href={g.src} target="_blank" rel="noopener noreferrer">
+                        <img src={g.src} loading="lazy" alt={g.caption || `${m.name}のギャラリー画像 ${i + 1}`} />
+                      </a>
+                    )}
                     {g.caption && <figcaption>{g.caption}</figcaption>}
                   </figure>
                 </li>
@@ -194,10 +198,12 @@ const hasSns = SNS.some((s) => (m.sns as any)[s.key]);
   .g-item { flex: 0 0 auto; scroll-snap-align: center; }
   .g-item figure { margin: 0; width: min(78vw, 300px); }
   .g-item a { display: block; }
-  .g-item img {
+  .g-item img,
+  .g-item video {
     width: 100%; height: 230px; object-fit: cover; display: block;
-    border-radius: 14px; border: 1px solid var(--color-border); background: var(--color-bg-soft);
+    border-radius: 14px; border: 1px solid var(--color-border); background: #000;
   }
+  .g-item video { object-fit: contain; }
   .g-item figcaption {
     margin-top: 0.5rem; font-size: 0.85rem; color: var(--color-text-muted);
     line-height: 1.5; text-align: center;
