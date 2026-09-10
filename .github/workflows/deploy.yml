@@ -6,11 +6,16 @@ on:
     branches: [main]
   # Actions タブから手動実行も可能（Notionの内容を「今すぐ反映」）
   workflow_dispatch:
-  # Notionの更新を定期的に取り込む（1時間ごと。UTC=JST共通で毎時00分）
-  # ※ GitHubのスケジュールはベストエフォートのため数分〜十数分の遅延あり。
-  #   即時反映したい場合は Actions の「Run workflow」(workflow_dispatch) を使う。
+  # 外部（GAS等）から即時ビルドを叩くためのイベント
+  #   例: POST /repos/<owner>/<repo>/dispatches  {"event_type":"rebuild"}
+  repository_dispatch:
+    types: [rebuild]
+  # Notionの更新を定期的に取り込む。
+  # ※ GitHubのスケジュールはベストエフォート。特に毎時"00分"は混雑で大幅に
+  #   間引かれるため、空いている分（:23）に設定して発火率を上げる。
+  #   即時反映は Actions の「Run workflow」または repository_dispatch を使う。
   schedule:
-    - cron: '0 * * * *'
+    - cron: '23 * * * *'
 
 # GitHub Pages へのデプロイに必要な権限
 permissions:
