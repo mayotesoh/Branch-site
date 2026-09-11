@@ -18,12 +18,19 @@
 
 const GH_OWNER = 'mayotesoh';
 const GH_REPO = 'Branch-site';
+const GH_WORKFLOW = 'deploy.yml'; // .github/workflows のファイル名
+const GH_REF = 'main';
 
-/** GitHub Actions に repository_dispatch(rebuild) を送ってビルドを起動 */
+/**
+ * GitHub Actions を workflow_dispatch で起動してサイトをビルド。
+ * ※ workflow_dispatch は Fine-grained トークンの「Actions = write」で動く。
+ *   （repository_dispatch は「Contents = write」が必要なので使わない）
+ */
 function triggerSiteBuild() {
   const token = PropertiesService.getScriptProperties().getProperty('GH_TOKEN');
   if (!token) throw new Error('スクリプトプロパティ GH_TOKEN が未設定です。');
-  const url = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO + '/dispatches';
+  const url = 'https://api.github.com/repos/' + GH_OWNER + '/' + GH_REPO +
+    '/actions/workflows/' + GH_WORKFLOW + '/dispatches';
   const res = UrlFetchApp.fetch(url, {
     method: 'post',
     contentType: 'application/json',
@@ -32,14 +39,14 @@ function triggerSiteBuild() {
       Accept: 'application/vnd.github+json',
       'X-GitHub-Api-Version': '2022-11-28',
     },
-    payload: JSON.stringify({ event_type: 'rebuild' }),
+    payload: JSON.stringify({ ref: GH_REF }),
     muteHttpExceptions: true,
   });
   const code = res.getResponseCode();
   // 204 No Content が成功
   if (code !== 204) {
     console.error('ビルド起動に失敗: ' + code + ' ' + res.getContentText());
-    throw new Error('GitHub dispatch failed: ' + code);
+    throw new Error('GitHub workflow_dispatch failed: ' + code);
   }
   console.log('サイトビルドを起動しました。');
 }
