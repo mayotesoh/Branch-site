@@ -48,11 +48,14 @@ const allTags = [...tagCounts.entries()].sort(
             {posts.map((post) => (
               <li class="post-card" data-tags={post.tags.join(',')}>
                 <a class="post-link" href={link(`/blog/${post.slug}`)}>
-                  {post.cover && (
-                    <div class="post-cover">
-                      <img src={post.cover} alt="" loading="lazy" />
-                    </div>
-                  )}
+                  <div class="post-cover">
+                    <img
+                      src={post.cover || link('/blog-cover-fallback.png')}
+                      alt=""
+                      loading="lazy"
+                      class={post.cover ? '' : 'is-fallback'}
+                    />
+                  </div>
                   <div class="post-body">
                     <div class="post-meta">
                       <span class="post-date">{fmtDate(post.publishDate)}</span>
@@ -178,6 +181,14 @@ const allTags = [...tagCounts.entries()].sort(
     aspect-ratio: 16 / 9;
     object-fit: cover;
     display: block;
+  }
+  /* カバー画像が無い記事：ロゴを中央に置いたプレースホルダー */
+  .post-cover img.is-fallback {
+    object-fit: contain;
+    padding: 1.4rem 2rem;
+    background:
+      radial-gradient(circle at 30% 20%, rgba(124, 92, 191, 0.1), transparent 60%),
+      var(--color-bg-soft);
   }
   .post-body {
     padding: 1.5rem 1.75rem;
