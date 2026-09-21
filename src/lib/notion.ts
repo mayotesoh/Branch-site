@@ -266,6 +266,13 @@ export interface Course {
 const TAX_RATE = 0.1;
 const taxIncluded = (n: number): number => (n > 0 ? Math.floor(n * (1 + TAX_RATE)) : 0);
 
+// プロパティ名の表記ゆれ（「(税抜き)」などの注釈付き）に強い数値取得。前方一致で拾う。
+// 例: '会員価格' → '会員価格(税抜き)' でもヒットする。
+const numByPrefix = (props: any, prefix: string): number => {
+  const key = Object.keys(props).find((k) => k.startsWith(prefix));
+  return key ? (props[key]?.number ?? 0) : 0;
+};
+
 let _courses: Promise<Course[]> | null = null;
 
 // 講師DB全件（公開/非公開問わず）から pageId → {氏名, id} のマップ
@@ -335,8 +342,8 @@ export function getCourses(): Promise<Course[]> {
             order: p['表示順']?.number ?? 0,
             curriculum,
             payable: pCheckbox(p['決済対象']),
-            memberPrice: taxIncluded(p['会員価格']?.number ?? 0),
-            nonMemberPrice: taxIncluded(p['非会員価格']?.number ?? 0),
+            memberPrice: taxIncluded(numByPrefix(p, '会員価格')),
+            nonMemberPrice: taxIncluded(numByPrefix(p, '非会員価格')),
           } as Course;
         })
       );
