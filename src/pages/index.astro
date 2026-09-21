@@ -37,7 +37,8 @@ const fmtEvent = (iso: string) => {
 
 const instaPosts = await getInstaPosts();
 const latestPosts = (await getPosts()).slice(0, 3);
-const authors = await getAuthors();
+// ホームの講師一覧は「肩書き＝講師」の人だけ（運営・コミュニティは除外）
+const homeInstructors = (await getAuthors()).filter((a) => a.role.includes('講師'));
 const staffUrl = (id: string) => `${base.replace(/\/$/, '')}/staff/${id}`;
 const instructorsUrl = `${base.replace(/\/$/, '')}/instructors`;
 
@@ -153,13 +154,13 @@ const steps = [
 
   <!-- 講師紹介（横スクロール） -->
   {
-    authors.length > 0 && (
+    homeInstructors.length > 0 && (
       <section class="section section-alt">
         <div class="container">
           <h2 class="section-title">講師紹介</h2>
           <p class="section-lead">あなたの学びを支える、Fortune Labo の講師陣</p>
           <div class="instr-scroll" role="list">
-            {authors.map((a) => (
+            {homeInstructors.map((a) => (
               <a class="instr-card" role="listitem" href={a.id ? staffUrl(a.id) : instructorsUrl}>
                 <div class="instr-avatar">
                   {a.image ? (
