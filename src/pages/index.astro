@@ -478,6 +478,8 @@ const steps = [
     scroll-snap-type: x mandatory;
     -webkit-overflow-scrolling: touch;
     scrollbar-width: thin;
+    /* 人数が少なければ中央、増えて溢れたら左寄せ＋横スクロール（safe） */
+    justify-content: safe center;
   }
   .instr-card {
     flex: 0 0 auto;
