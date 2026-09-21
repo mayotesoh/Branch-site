@@ -57,6 +57,10 @@ const CATEGORY_META: Record<string, { icon: string; lead: string }> = {
     icon: '🎤',
     lead: '話術・AI活用・カード学習など、テーマ別に学べる単発セミナー',
   },
+  'その他': {
+    icon: '✦',
+    lead: 'その他の講座・セッション',
+  },
 };
 
 // セッションをカテゴリ順（初出順＝表示順）にグルーピング
@@ -80,10 +84,12 @@ const categories: {
   }[];
 }[] = [];
 for (const c of sessionCourses) {
-  let cat = categories.find((x) => x.name === c.category);
+  // カテゴリ未設定の講座は「その他」にまとめる（ラベル無しチップを防ぐ）
+  const catName = c.category || 'その他';
+  let cat = categories.find((x) => x.name === catName);
   if (!cat) {
-    const meta = CATEGORY_META[c.category] ?? { icon: '✦', lead: '' };
-    cat = { icon: meta.icon, name: c.category, lead: meta.lead, items: [] };
+    const meta = CATEGORY_META[catName] ?? { icon: '✦', lead: '' };
+    cat = { icon: meta.icon, name: catName, lead: meta.lead, items: [] };
     categories.push(cat);
   }
   cat.items.push({
