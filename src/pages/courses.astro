@@ -167,6 +167,16 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
         )
       }
 
+      <!-- 並び替え -->
+      <div class="filter-bar">
+        <span class="filter-label">並び替え</span>
+        <div class="course-filter" id="sortBar">
+          <button class="chip is-active" data-sort="default" type="button">おすすめ順</button>
+          <button class="chip" data-sort="asc" type="button">価格の安い順</button>
+          <button class="chip" data-sort="desc" type="button">価格の高い順</button>
+        </div>
+      </div>
+
       <p class="filter-empty" id="filterEmpty" hidden>
         該当する講座がありません。
       </p>
@@ -183,7 +193,7 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
         <div class="cert-grid">
           {
             certCourses.map((c) => (
-              <article class="cert-card" data-arts={c.arts.join('|')}>
+              <article class="cert-card" data-arts={c.arts.join('|')} data-price={c.memberPrice > 0 ? c.memberPrice : c.nonMemberPrice > 0 ? c.nonMemberPrice : ''}>
                 <div class="cert-head">
                   <h3 class="cert-name">{c.name}</h3>
                   {c.note && <span class="badge badge-note">※ {c.note}</span>}
@@ -231,7 +241,7 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
             </div>
             <ul class="course-grid">
               {cat.items.map((item) => (
-                <li class="course-card" data-arts={item.arts.join('|')}>
+                <li class="course-card" data-arts={item.arts.join('|')} data-price={item.memberPrice > 0 ? item.memberPrice : item.nonMemberPrice > 0 ? item.nonMemberPrice : ''}>
                   <p class="course-title">{item.title}</p>
                   <p class="course-desc">{item.desc}</p>
                   <div class="meta">
@@ -316,6 +326,39 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
     }
     wire(catBar, 'cat');
     wire(artBar, 'art');
+
+    // 価格ソート（各グループ内で並べ替え。価格未設定は常に末尾）
+    const sortBar = document.getElementById('sortBar');
+    const gridEls = Array.from(document.querySelectorAll('.cert-grid, .course-grid')) as HTMLElement[];
+    const origOrder = new Map<HTMLElement, HTMLElement[]>();
+    gridEls.forEach((g) => origOrder.set(g, Array.from(g.children) as HTMLElement[]));
+
+    function sortCourses(mode: string) {
+      gridEls.forEach((g) => {
+        let items = (origOrder.get(g) || []).slice();
+        if (mode === 'asc' || mode === 'desc') {
+          const hasPrice = (el: HTMLElement) => el.dataset.price != null && el.dataset.price !== '';
+          const priced = items.filter(hasPrice);
+          const unpriced = items.filter((el) => !hasPrice(el));
+          priced.sort(
+            (a, b) =>
+              (Number(a.dataset.price) - Number(b.dataset.price)) * (mode === 'desc' ? -1 : 1)
+          );
+          items = [...priced, ...unpriced];
+        }
+        items.forEach((el) => g.appendChild(el));
+      });
+    }
+
+    if (sortBar) {
+      const chips = Array.from(sortBar.querySelectorAll('.chip')) as HTMLElement[];
+      sortBar.addEventListener('click', (e) => {
+        const chip = (e.target as HTMLElement).closest('.chip') as HTMLElement | null;
+        if (!chip) return;
+        chips.forEach((c) => c.classList.toggle('is-active', c === chip));
+        sortCourses(chip.dataset.sort || 'default');
+      });
+    }
   </script>
 </Layout>
 
