@@ -11,8 +11,9 @@ interface EvItem {
   accepting: boolean;
   memo: string;
   body: string;
+  staff?: { name: string; id: string; image: string }[];
 }
-import { LINE_URL } from '../consts';
+import { EVENT_INQUIRY_URL } from '../consts';
 const { events = [] } = Astro.props as { events: EvItem[] };
 const base = import.meta.env.BASE_URL;
 const memberUrl = `${base.replace(/\/$/, '')}/member`;
@@ -25,6 +26,7 @@ const memberUrl = `${base.replace(/\/$/, '')}/member`;
     <div class="ev-modal-tags" id="evmTags"></div>
     <h3 class="ev-modal-name" id="evmName"></h3>
     <p class="ev-modal-date" id="evmDate"></p>
+    <div class="ev-modal-staff" id="evmStaff" hidden></div>
     <div class="ev-modal-body" id="evmBody"></div>
 
     <div class="ev-signup" id="evmSignup" hidden>
@@ -33,11 +35,11 @@ const memberUrl = `${base.replace(/\/$/, '')}/member`;
         <p class="ev-signup-step">会員ページから予約でき、当日は合言葉で出席＝スタンプがたまります。</p>
         <a class="btn btn-primary ev-member-btn" href={memberUrl}>会員ページで予約する →</a>
       </div>
-      <p class="ev-signup-or"><span>会員以外の方はこちら</span></p>
-      <p class="ev-signup-title">📱 LINEで受付</p>
+      <p class="ev-signup-or"><span>会員以外の方・イベントに興味がある方はこちら</span></p>
+      <p class="ev-signup-title">📱 LINEでお問い合わせ</p>
       <p class="ev-signup-step">
-        ① 下のメッセージを「コピー」<br />
-        ② 「LINEを開く」→ トークに貼り付けて送信してください。
+        気になるイベントは、お気軽にLINEでお問い合わせください。<br />
+        下のメッセージを「コピー」して送っていただくとスムーズです。
       </p>
       <div class="ev-signup-copy">
         <input class="ev-signup-input" id="evmMsg" type="text" readonly />
@@ -45,7 +47,7 @@ const memberUrl = `${base.replace(/\/$/, '')}/member`;
       </div>
       <a
         class="btn btn-line ev-signup-line"
-        href={LINE_URL}
+        href={EVENT_INQUIRY_URL}
         target="_blank"
         rel="noopener noreferrer"
       >
@@ -54,7 +56,7 @@ const memberUrl = `${base.replace(/\/$/, '')}/member`;
             d="M12 3C6.48 3 2 6.6 2 11.02c0 2.55 1.5 4.8 3.86 6.25-.17.6-.62 2.2-.71 2.54-.11.42.16.41.33.3.14-.09 2.16-1.43 3.04-2.02.78.11 1.59.17 2.48.17 5.52 0 10-3.6 10-8.04C22 6.6 17.52 3 12 3z"
           ></path>
         </svg>
-        LINEを開く
+        LINEで問い合わせる
       </a>
     </div>
 
@@ -87,6 +89,7 @@ const memberUrl = `${base.replace(/\/$/, '')}/member`;
     const mBody = document.getElementById('evmBody');
     const mActions = document.getElementById('evmActions');
     const mSignup = document.getElementById('evmSignup');
+    const mStaff = document.getElementById('evmStaff');
     const mMsg = document.getElementById('evmMsg');
     const mCopy = document.getElementById('evmCopy');
 
@@ -126,6 +129,23 @@ const memberUrl = `${base.replace(/\/$/, '')}/member`;
       mTags.innerHTML = tags;
       mName.textContent = e.name || 'イベント';
       mDate.textContent = fmtRange(e);
+      // 参加講師アイコン
+      const staff = e.staff || [];
+      if (staff.length) {
+        mStaff.innerHTML =
+          '<span class="evm-staff-label">参加講師</span>' +
+          staff
+            .map((s) => {
+              const av = s.image
+                ? `<img src="${esc(s.image)}" alt="${esc(s.name)}" loading="lazy">`
+                : `<span class="evm-staff-fallback">${esc((s.name || '').trim().charAt(0))}</span>`;
+              return `<span class="evm-staff-chip">${av}<span class="evm-staff-nm">${esc(s.name)}</span></span>`;
+            })
+            .join('');
+        mStaff.hidden = false;
+      } else {
+        mStaff.hidden = true;
+      }
       mBody.innerHTML = e.body || (e.memo ? `<p>${esc(e.memo)}</p>` : '<p class="evm-none">詳細は準備中です。</p>');
       // 受付（LINE）：これからのイベントのみ表示
       if (isUpcoming(e)) {
@@ -260,6 +280,47 @@ const memberUrl = `${base.replace(/\/$/, '')}/member`;
     color: var(--color-primary-soft);
     font-weight: 700;
     margin-bottom: 1.1rem;
+  }
+  .ev-modal-staff {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem 0.7rem;
+    margin: 0 0 1.1rem;
+    padding: 0.7rem 0.9rem;
+    background: var(--color-bg-soft);
+    border: 1px solid var(--color-border);
+    border-radius: 12px;
+  }
+  .ev-modal-staff[hidden] { display: none; }
+  .evm-staff-label {
+    font-size: 0.78rem;
+    font-weight: 700;
+    color: var(--color-text-muted);
+  }
+  .evm-staff-chip {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.35rem;
+    font-size: 0.85rem;
+    font-weight: 700;
+  }
+  .evm-staff-chip img,
+  .evm-staff-fallback {
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    object-fit: cover;
+    border: 2px solid var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border);
+  }
+  .evm-staff-fallback {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    background: var(--color-primary);
+    color: #fff;
+    font-size: 0.85rem;
   }
   .ev-modal-body {
     color: var(--color-text);

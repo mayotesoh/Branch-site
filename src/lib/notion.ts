@@ -426,20 +426,46 @@ export interface EventItem {
   url: string; // 案内URL
   memo: string;
   body: string; // ページ本文（「開く」で書いた詳細）のHTML
+  staff: { name: string; id: string; image: string }[]; // 参加講師（アイコン表示用）
 }
 
 let _events: Promise<EventItem[]> | null = null;
+
+// 講師DB全件（公開/非公開問わず）から pageId → {名前, id, 顔写真} のマップ
+let _instrFullMap: Promise<Map<string, { name: string; id: string; image: string }>> | null = null;
+function getInstructorFullMap(): Promise<Map<string, { name: string; id: string; image: string }>> {
+  if (!_instrFullMap) {
+    _instrFullMap = (async () => {
+      const rows = await queryAll(INSTR_DB);
+      const m = new Map<string, { name: string; id: string; image: string }>();
+      for (const r of rows) {
+        const p = r.properties;
+        m.set(r.id, {
+          name: pText(p['名前']),
+          id: pText(p['id']),
+          image: localizeImage(pFile(p['顔写真'])),
+        });
+      }
+      return m;
+    })();
+  }
+  return _instrFullMap;
+}
 
 /** イベント一覧（開催日の昇順）。※合言葉などの内部情報は返さない */
 export function getEvents(): Promise<EventItem[]> {
   if (!_events) {
     _events = (async () => {
+      const instrMap = await getInstructorFullMap();
       const rows = await queryAll(EVENT_DB, {
         sorts: [{ property: '開催日', direction: 'ascending' }],
       });
       return Promise.all(
         rows.map(async (r) => {
           const p = r.properties;
+          const staff = pRelIds(p['参加講師'])
+            .map((id: string) => instrMap.get(id))
+            .filter(Boolean) as { name: string; id: string; image: string }[];
           return {
             pageId: r.id,
             name: pText(p['イベント名']),
@@ -450,6 +476,7 @@ export function getEvents(): Promise<EventItem[]> {
             url: p['案内URL']?.url ?? '',
             memo: pText(p['メモ']),
             body: await getPageBodyHtml(r.id),
+            staff,
           } as EventItem;
         })
       );

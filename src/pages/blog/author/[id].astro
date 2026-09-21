@@ -4,7 +4,9 @@ import { getAuthors, getPosts } from '../../../lib/notion';
 
 export async function getStaticPaths() {
   const authors = await getAuthors();
-  return authors.map((a) => ({ params: { id: a.id }, props: { author: a } }));
+  return authors
+    .filter((a) => a.id)
+    .map((a) => ({ params: { id: a.id }, props: { author: a } }));
 }
 
 const { author } = Astro.props;

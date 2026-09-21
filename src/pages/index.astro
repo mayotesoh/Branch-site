@@ -3,7 +3,7 @@ import Layout from '../layouts/Layout.astro';
 import LineButton from '../components/LineButton.astro';
 import EventModal from '../components/EventModal.astro';
 import { INSTAGRAM_URL } from '../consts';
-import { getInstaPosts, getPosts, getEvents, getThemes } from '../lib/notion';
+import { getInstaPosts, getPosts, getEvents, getThemes, getAuthors } from '../lib/notion';
 
 const base = import.meta.env.BASE_URL;
 const joinUrl = `${base.replace(/\/$/, '')}/join`;
@@ -37,6 +37,9 @@ const fmtEvent = (iso: string) => {
 
 const instaPosts = await getInstaPosts();
 const latestPosts = (await getPosts()).slice(0, 3);
+const authors = await getAuthors();
+const staffUrl = (id: string) => `${base.replace(/\/$/, '')}/staff/${id}`;
+const instructorsUrl = `${base.replace(/\/$/, '')}/instructors`;
 
 // 今後のイベント（開催日が今日以降）を近い順に最大3件
 const _today = new Date();
@@ -60,6 +63,7 @@ const homeEventData = upcomingEvents.map((e) => ({
   accepting: e.accepting,
   memo: e.memo,
   body: e.body,
+  staff: e.staff,
 }));
 
 const features = [
@@ -146,6 +150,37 @@ const steps = [
       </div>
     </div>
   </section>
+
+  <!-- 講師紹介（横スクロール） -->
+  {
+    authors.length > 0 && (
+      <section class="section section-alt">
+        <div class="container">
+          <h2 class="section-title">講師紹介</h2>
+          <p class="section-lead">あなたの学びを支える、Fortune Labo の講師陣</p>
+          <div class="instr-scroll" role="list">
+            {authors.map((a) => (
+              <a class="instr-card" role="listitem" href={a.id ? staffUrl(a.id) : instructorsUrl}>
+                <div class="instr-avatar">
+                  {a.image ? (
+                    <img src={a.image} alt={`${a.name}の写真`} loading="lazy" />
+                  ) : (
+                    <span class="instr-avatar-fb" aria-hidden="true">{a.name.trim().charAt(0)}</span>
+                  )}
+                </div>
+                <p class="instr-name">{a.name}</p>
+                {a.role && <p class="instr-role">{a.role}</p>}
+                {a.arts.length > 0 && <p class="instr-arts">{a.arts.slice(0, 3).join('・')}</p>}
+              </a>
+            ))}
+          </div>
+          <div class="instr-more">
+            <a class="btn btn-ghost" href={instructorsUrl}>講師一覧を見る →</a>
+          </div>
+        </div>
+      </section>
+    )
+  }
 
   <!-- 今後のイベント -->
   {
@@ -432,6 +467,58 @@ const steps = [
     background: var(--color-bg-soft);
     border-block: 1px solid var(--color-border);
   }
+
+  /* 講師紹介（横スクロール） */
+  .instr-scroll {
+    display: flex;
+    gap: 1rem;
+    overflow-x: auto;
+    padding: 0.5rem 0.2rem 1rem;
+    scroll-snap-type: x mandatory;
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: thin;
+  }
+  .instr-card {
+    flex: 0 0 auto;
+    width: 150px;
+    scroll-snap-align: start;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+    gap: 0.35rem;
+    padding: 1.1rem 0.8rem 1.2rem;
+    background: var(--color-surface);
+    border: 1px solid var(--color-border);
+    border-radius: var(--radius);
+    color: inherit;
+    transition: transform 0.15s ease, border-color 0.15s ease, box-shadow 0.2s ease;
+  }
+  .instr-card:hover {
+    transform: translateY(-4px);
+    border-color: var(--color-primary);
+    box-shadow: 0 10px 22px rgba(26, 36, 64, 0.12);
+  }
+  .instr-avatar {
+    width: 92px;
+    height: 92px;
+    border-radius: 50%;
+    overflow: hidden;
+    border: 3px solid var(--color-surface);
+    box-shadow: 0 0 0 1px var(--color-border);
+    background: var(--color-bg-soft);
+    margin-bottom: 0.2rem;
+  }
+  .instr-avatar img { width: 100%; height: 100%; object-fit: cover; display: block; }
+  .instr-avatar-fb {
+    display: flex; align-items: center; justify-content: center;
+    width: 100%; height: 100%; font-size: 2rem; font-weight: 800;
+    color: #fff; background: var(--color-primary);
+  }
+  .instr-name { font-weight: 800; font-size: 0.98rem; line-height: 1.3; }
+  .instr-role { font-size: 0.76rem; color: var(--color-primary-soft); font-weight: 700; }
+  .instr-arts { font-size: 0.72rem; color: var(--color-text-muted); line-height: 1.4; }
+  .instr-more { text-align: center; margin-top: 0.6rem; }
 
   /* Instagram */
   .insta-grid {

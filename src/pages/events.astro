@@ -38,6 +38,7 @@ const calEvents = allEvents
     accepting: e.accepting,
     memo: e.memo,
     body: e.body,
+    staff: e.staff,
   }));
 
 // 過去（今月より前）のイベントは一覧で下に表示
@@ -176,8 +177,18 @@ const past = allEvents
       const chips = evs
         .map((e) => {
           const t = timeStr(e.date);
+          const avatars = (e.staff || [])
+            .slice(0, 4)
+            .map((s) =>
+              s.image
+                ? `<img class="cal-ev-av" src="${esc(s.image)}" alt="${esc(s.name)}" loading="lazy">`
+                : `<span class="cal-ev-av cal-ev-av-fb">${esc((s.name || '').trim().charAt(0))}</span>`
+            )
+            .join('');
+          const avStrip = avatars ? `<span class="cal-ev-avs">${avatars}</span>` : '';
           return `<button class="cal-ev" type="button" data-ev-open="${esc(e.id)}">`
             + `<span class="cal-ev-nm"><span class="cal-ev-ic">${ICON[e.type] || '✦'}</span>${esc(e.name)}</span>`
+            + avStrip
             + `${t ? `<span class="cal-ev-tm">${esc(t)}</span>` : ''}</button>`;
         })
         .join('');
@@ -352,10 +363,21 @@ const past = allEvents
     overflow: hidden; font-weight: 700;
   }
   #calGrid .cal-ev-tm { font-size: 0.64rem; opacity: 0.85; font-weight: 600; }
+  #calGrid .cal-ev-avs { display: flex; align-items: center; margin-top: 1px; }
+  #calGrid .cal-ev-av {
+    width: 16px; height: 16px; border-radius: 50%; object-fit: cover;
+    border: 1.5px solid var(--color-primary); background: #fff; margin-left: -4px;
+  }
+  #calGrid .cal-ev-avs .cal-ev-av:first-child { margin-left: 0; }
+  #calGrid .cal-ev-av-fb {
+    display: inline-flex; align-items: center; justify-content: center;
+    background: #fff; color: var(--color-primary); font-size: 0.55rem; font-weight: 800;
+  }
   @media (max-width: 560px) {
     #calGrid .cal-cell { min-height: 66px; padding: 0.2rem; }
     #calGrid .cal-ev { padding: 3px 4px; font-size: 0.64rem; }
-    #calGrid .cal-ev-nm { -webkit-line-clamp: 3; }
+    #calGrid .cal-ev-nm { -webkit-line-clamp: 2; }
     #calGrid .cal-ev-tm { display: none; }
+    #calGrid .cal-ev-av { width: 14px; height: 14px; }
   }
 </style>
