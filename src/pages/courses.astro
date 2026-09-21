@@ -13,107 +13,40 @@ const allCourses = await getCourses();
 // 個別ページがある（公開）スタッフのidだけリンクする
 const publicStaffIds = new Set((await getAuthors()).map((a) => a.id).filter(Boolean));
 
-// 養成講座（種別で判定）
-const certCourses = allCourses
-  .filter((c) => c.type === '養成講座')
-  .map((c) => ({
-    id: c.pageId.replace(/-/g, ''),
-    name: c.name,
-    course: c.courseName,
-    period: c.period,
-    instructor: c.instructor,
-    target: c.desc,
-    afterCare: c.afterCare,
-    online: c.method,
-    note: c.note,
-    curriculum: c.curriculum,
-    extra: c.extra,
-    arts: c.arts,
-    instructors: c.instructors,
-    memberPrice: c.memberPrice,
-    nonMemberPrice: c.nonMemberPrice,
-  }));
-
-// カテゴリ別メタ（アイコン・リード文はコード側で保持）
-const CATEGORY_META: Record<string, { icon: string; lead: string }> = {
-  'キャリア・デビュー支援': {
-    icon: '🧭',
-    lead: '方向性を定め、実力を判定し、占い師としてデビューする',
-  },
-  '体験講座（はじめての方へ）': {
-    icon: '🌱',
-    lead: 'まずは気軽に。占いの世界にふれる入門講座',
-  },
-  '練習会・ロールプレイ': { icon: '🃏', lead: '実践を重ね、読みと伝え方を磨く' },
-  '集客・収益化・ビジネス': {
-    icon: '💰',
-    lead: '占いを「稼げる仕事」にするための実務とノウハウ',
-  },
-  'メンタル・セルフケア': {
-    icon: '🌿',
-    lead: '占い師として長く活動するための心の整え方',
-  },
-  'セミナー': {
-    icon: '🎤',
-    lead: '話術・AI活用・カード学習など、テーマ別に学べる単発セミナー',
-  },
-  'その他': {
-    icon: '✦',
-    lead: 'その他の講座・セッション',
-  },
+// カテゴリのアイコン（フィルタチップ用）
+const CATEGORY_ICON: Record<string, string> = {
+  '養成講座': '🎓',
+  'キャリア・デビュー支援': '🧭',
+  '体験講座（はじめての方へ）': '🌱',
+  '練習会・ロールプレイ': '🃏',
+  '集客・収益化・ビジネス': '💰',
+  'メンタル・セルフケア': '🌿',
+  'セミナー': '🎤',
+  'その他': '✦',
 };
 
-// セッションをカテゴリ順（初出順＝表示順）にグルーピング
-const sessionCourses = allCourses.filter((c) => c.type !== '養成講座');
-const categories: {
-  icon: string;
-  name: string;
-  lead: string;
-  items: {
-    id: string;
-    title: string;
-    desc: string;
-    instructor: string;
-    instructors: { name: string; id: string }[];
-    method: string;
-    time: string;
-    note: string;
-    arts: string[];
-    memberPrice: number;
-    nonMemberPrice: number;
-  }[];
-}[] = [];
-for (const c of sessionCourses) {
-  // カテゴリ未設定の講座は「その他」にまとめる（ラベル無しチップを防ぐ）
-  const catName = c.category || 'その他';
-  let cat = categories.find((x) => x.name === catName);
-  if (!cat) {
-    const meta = CATEGORY_META[catName] ?? { icon: '✦', lead: '' };
-    cat = { icon: meta.icon, name: catName, lead: meta.lead, items: [] };
-    categories.push(cat);
-  }
-  cat.items.push({
-    id: c.pageId.replace(/-/g, ''),
-    title: c.name,
-    desc: c.desc,
-    instructor: c.instructor,
-    instructors: c.instructors,
-    method: c.method,
-    time: c.period,
-    note: c.note,
-    arts: c.arts,
-    memberPrice: c.memberPrice,
-    nonMemberPrice: c.nonMemberPrice,
-  });
-}
+// 全講座をフラットな1リストに（カテゴリ枠は設けず、タグ絞り込み＋全体で価格ソート）
+const flat = allCourses.map((c) => ({
+  id: c.pageId.replace(/-/g, ''),
+  isCert: c.type === '養成講座',
+  title: c.name,
+  subtitle: c.courseName,
+  desc: c.desc,
+  instructors: c.instructors,
+  arts: c.arts,
+  period: c.period,
+  method: c.method,
+  afterCare: c.afterCare,
+  note: c.note,
+  categories: c.categories.length ? c.categories : ['その他'],
+  memberPrice: c.memberPrice,
+  nonMemberPrice: c.nonMemberPrice,
+}));
 
-// 絞り込みタグ（養成講座＋セッションの各カテゴリ）
-const filterGroups = [
-  ...(certCourses.length > 0
-    ? [{ key: '養成講座', label: '養成講座', icon: '🎓' }]
-    : []),
-  ...categories.map((c) => ({ key: c.name, label: c.name, icon: c.icon })),
-];
+// カテゴリ絞り込みタグ（全講座の全カテゴリの和集合・出現順）
+const catSet: string[] = [];
+for (const c of flat) for (const cat of c.categories) if (!catSet.includes(cat)) catSet.push(cat);
+const filterGroups = catSet.map((name) => ({ key: name, label: name, icon: CATEGORY_ICON[name] ?? '✦' }));
 
 // 占術フィルター（講座に設定された占術を出現順に）
 const ART_ICON: Record<string, string> = {
@@ -187,97 +120,49 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
         該当する講座がありません。
       </p>
 
-      <!-- 養成講座 -->
-      <div class="cat" data-group="養成講座">
-        <div class="cat-head">
-          <span class="cat-icon">🎓</span>
-          <div>
-            <h2 class="cat-name">養成講座（プロデビューを目指す本格コース）</h2>
-            <p class="cat-lead">占術を体系的に習得し、占い師・鑑定士としてデビューする</p>
-          </div>
-        </div>
-        <div class="cert-grid">
-          {
-            certCourses.map((c) => (
-              <article class="cert-card" data-arts={c.arts.join('|')} data-price={c.memberPrice > 0 ? c.memberPrice : c.nonMemberPrice > 0 ? c.nonMemberPrice : ''}>
-                <div class="cert-head">
-                  <h3 class="cert-name">{c.name}</h3>
-                  {c.note && <span class="badge badge-note">※ {c.note}</span>}
-                </div>
-                <p class="cert-course">{c.course}</p>
-                <p class="cert-target">{c.target}</p>
-                <div class="meta">
-                  {c.arts.map((a) => (
-                    <span class="badge badge-art">{ART_ICON[a] ?? '🔮'} {a}</span>
-                  ))}
-                  {c.instructors.map((teacher) =>
-                    publicStaffIds.has(teacher.id) ? (
-                      <a class="badge badge-teacher" href={staffUrl(teacher.id)}>👤 {teacher.name}</a>
-                    ) : (
-                      <span class="badge">👤 {teacher.name}</span>
-                    )
-                  )}
-                  {c.period && <span class="badge">⏱ {c.period}</span>}
-                  {c.online && <span class="badge">💻 {c.online}</span>}
-                  {c.afterCare && <span class="badge">2か月間 無料アフターフォロー付</span>}
-                </div>
-                {(c.memberPrice > 0 || c.nonMemberPrice > 0) && (
-                  <div class="price-row">
-                    {c.memberPrice > 0 && <span class="price"><b>会員</b>{yen(c.memberPrice)}<span class="tax">税込</span></span>}
-                    {c.nonMemberPrice > 0 && <span class="price"><b>一般</b>{yen(c.nonMemberPrice)}<span class="tax">税込</span></span>}
-                  </div>
-                )}
-                <a class="detail-link" href={courseUrl(c.id)}>詳細・お申し込み →</a>
-              </article>
-            ))
-          }
-        </div>
-      </div>
-
-      <!-- セッション・講座（テーマ別） -->
-      {
-        categories.map((cat) => (
-          <div class="cat" data-group={cat.name}>
-            <div class="cat-head">
-              <span class="cat-icon">{cat.icon}</span>
-              <div>
-                <h2 class="cat-name">{cat.name}</h2>
-                <p class="cat-lead">{cat.lead}</p>
+      <!-- 全講座（枠なし・タグ絞り込み＋全体で価格ソート） -->
+      <div class="course-grid" id="courseGrid">
+        {
+          flat.map((c) => (
+            <article
+              class={`course-card${c.isCert ? ' is-cert' : ''}`}
+              data-category={c.categories.join('|')}
+              data-arts={c.arts.join('|')}
+              data-price={c.memberPrice > 0 ? c.memberPrice : c.nonMemberPrice > 0 ? c.nonMemberPrice : ''}
+            >
+              <div class="course-head">
+                {c.isCert && <span class="badge badge-cert">🎓 養成講座</span>}
+                <p class="course-title">{c.title}</p>
               </div>
-            </div>
-            <ul class="course-grid">
-              {cat.items.map((item) => (
-                <li class="course-card" data-arts={item.arts.join('|')} data-price={item.memberPrice > 0 ? item.memberPrice : item.nonMemberPrice > 0 ? item.nonMemberPrice : ''}>
-                  <p class="course-title">{item.title}</p>
-                  <p class="course-desc">{item.desc}</p>
-                  <div class="meta">
-                    {item.arts.map((a) => (
-                      <span class="badge badge-art">{ART_ICON[a] ?? '🔮'} {a}</span>
-                    ))}
-                    {item.instructors.map((teacher) =>
-                      publicStaffIds.has(teacher.id) ? (
-                        <a class="badge badge-teacher" href={staffUrl(teacher.id)}>👤 {teacher.name}</a>
-                      ) : (
-                        <span class="badge">👤 {teacher.name}</span>
-                      )
-                    )}
-                    {item.time && <span class="badge">⏱ {item.time}</span>}
-                    {item.method && <span class="badge badge-method">{item.method}</span>}
-                  </div>
-                  {(item.memberPrice > 0 || item.nonMemberPrice > 0) && (
-                    <div class="price-row">
-                      {item.memberPrice > 0 && <span class="price"><b>会員</b>{yen(item.memberPrice)}<span class="tax">税込</span></span>}
-                      {item.nonMemberPrice > 0 && <span class="price"><b>一般</b>{yen(item.nonMemberPrice)}<span class="tax">税込</span></span>}
-                    </div>
-                  )}
-                  {item.note && <p class="course-note">※ {item.note}</p>}
-                  <a class="detail-link" href={courseUrl(item.id)}>詳細・お申し込み →</a>
-                </li>
-              ))}
-            </ul>
-          </div>
-        ))
-      }
+              {c.isCert && c.subtitle && <p class="course-sub">{c.subtitle}</p>}
+              {c.desc && <p class="course-desc">{c.desc}</p>}
+              <div class="meta">
+                {c.arts.map((a) => (
+                  <span class="badge badge-art">{ART_ICON[a] ?? '🔮'} {a}</span>
+                ))}
+                {c.instructors.map((teacher) =>
+                  publicStaffIds.has(teacher.id) ? (
+                    <a class="badge badge-teacher" href={staffUrl(teacher.id)}>👤 {teacher.name}</a>
+                  ) : (
+                    <span class="badge">👤 {teacher.name}</span>
+                  )
+                )}
+                {c.period && <span class="badge">⏱ {c.period}</span>}
+                {c.method && <span class="badge badge-method">{c.method}</span>}
+                {c.afterCare && <span class="badge">2か月間 無料アフターフォロー付</span>}
+              </div>
+              {(c.memberPrice > 0 || c.nonMemberPrice > 0) && (
+                <div class="price-row">
+                  {c.memberPrice > 0 && <span class="price"><b>会員</b>{yen(c.memberPrice)}<span class="tax">税込</span></span>}
+                  {c.nonMemberPrice > 0 && <span class="price"><b>一般</b>{yen(c.nonMemberPrice)}<span class="tax">税込</span></span>}
+                </div>
+              )}
+              {c.note && <p class="course-note">※ {c.note}</p>}
+              <a class="detail-link" href={courseUrl(c.id)}>詳細・お申し込み →</a>
+            </article>
+          ))
+        }
+      </div>
 
       <div class="courses-cta">
         <p>気になる講座はありましたか？ご予約・ご相談は公式LINEから。</p>
@@ -292,79 +177,66 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
   <script>
     const catBar = document.getElementById('courseFilter');
     const artBar = document.getElementById('artFilter');
-    const groups = Array.from(document.querySelectorAll('.cat[data-group]')) as HTMLElement[];
+    const sortBar = document.getElementById('sortBar');
+    const grid = document.getElementById('courseGrid');
     const emptyMsg = document.getElementById('filterEmpty');
+    const cards = grid
+      ? (Array.from(grid.querySelectorAll('.course-card')) as HTMLElement[])
+      : [];
+    const origOrder = cards.slice();
     let selCat = 'all';
     let selArt = 'all';
 
     function apply() {
-      let anySection = 0;
-      groups.forEach((sec) => {
-        const secMatchCat = selCat === 'all' || sec.dataset.group === selCat;
-        let visibleCards = 0;
-        sec.querySelectorAll('[data-arts]').forEach((card) => {
-          const el = card as HTMLElement;
-          const arts = el.dataset.arts ? el.dataset.arts.split('|').filter(Boolean) : [];
-          const artMatch = selArt === 'all' || arts.indexOf(selArt) !== -1;
-          const show = secMatchCat && artMatch;
-          el.hidden = !show;
-          if (show) visibleCards++;
-        });
-        const showSec = secMatchCat && visibleCards > 0;
-        sec.hidden = !showSec;
-        if (showSec) anySection++;
+      let visible = 0;
+      cards.forEach((el) => {
+        const cats = el.dataset.category ? el.dataset.category.split('|').filter(Boolean) : [];
+        const arts = el.dataset.arts ? el.dataset.arts.split('|').filter(Boolean) : [];
+        const catMatch = selCat === 'all' || cats.indexOf(selCat) !== -1;
+        const artMatch = selArt === 'all' || arts.indexOf(selArt) !== -1;
+        const show = catMatch && artMatch;
+        el.hidden = !show;
+        if (show) visible++;
       });
-      if (emptyMsg) emptyMsg.hidden = anySection > 0;
+      if (emptyMsg) emptyMsg.hidden = visible > 0;
     }
 
-    function wire(bar: HTMLElement | null, key: 'cat' | 'art') {
+    // 全体で価格ソート（価格未設定は常に末尾）
+    function sortCourses(mode: string) {
+      if (!grid) return;
+      let items = origOrder.slice();
+      if (mode === 'asc' || mode === 'desc') {
+        const hasPrice = (el: HTMLElement) => el.dataset.price != null && el.dataset.price !== '';
+        const priced = items.filter(hasPrice);
+        const unpriced = items.filter((el) => !hasPrice(el));
+        priced.sort(
+          (a, b) =>
+            (Number(a.dataset.price) - Number(b.dataset.price)) * (mode === 'desc' ? -1 : 1)
+        );
+        items = [...priced, ...unpriced];
+      }
+      items.forEach((el) => grid.appendChild(el));
+    }
+
+    function wire(bar: HTMLElement | null, key: 'cat' | 'art' | 'sort') {
       if (!bar) return;
       const chips = Array.from(bar.querySelectorAll('.chip')) as HTMLElement[];
       bar.addEventListener('click', (e) => {
         const chip = (e.target as HTMLElement).closest('.chip') as HTMLElement | null;
         if (!chip) return;
         chips.forEach((c) => c.classList.toggle('is-active', c === chip));
-        const val = key === 'cat' ? chip.dataset.filter : chip.dataset.art;
-        if (key === 'cat') selCat = val || 'all';
-        else selArt = val || 'all';
+        if (key === 'sort') {
+          sortCourses(chip.dataset.sort || 'default');
+          return;
+        }
+        if (key === 'cat') selCat = chip.dataset.filter || 'all';
+        else selArt = chip.dataset.art || 'all';
         apply();
       });
     }
     wire(catBar, 'cat');
     wire(artBar, 'art');
-
-    // 価格ソート（各グループ内で並べ替え。価格未設定は常に末尾）
-    const sortBar = document.getElementById('sortBar');
-    const gridEls = Array.from(document.querySelectorAll('.cert-grid, .course-grid')) as HTMLElement[];
-    const origOrder = new Map<HTMLElement, HTMLElement[]>();
-    gridEls.forEach((g) => origOrder.set(g, Array.from(g.children) as HTMLElement[]));
-
-    function sortCourses(mode: string) {
-      gridEls.forEach((g) => {
-        let items = (origOrder.get(g) || []).slice();
-        if (mode === 'asc' || mode === 'desc') {
-          const hasPrice = (el: HTMLElement) => el.dataset.price != null && el.dataset.price !== '';
-          const priced = items.filter(hasPrice);
-          const unpriced = items.filter((el) => !hasPrice(el));
-          priced.sort(
-            (a, b) =>
-              (Number(a.dataset.price) - Number(b.dataset.price)) * (mode === 'desc' ? -1 : 1)
-          );
-          items = [...priced, ...unpriced];
-        }
-        items.forEach((el) => g.appendChild(el));
-      });
-    }
-
-    if (sortBar) {
-      const chips = Array.from(sortBar.querySelectorAll('.chip')) as HTMLElement[];
-      sortBar.addEventListener('click', (e) => {
-        const chip = (e.target as HTMLElement).closest('.chip') as HTMLElement | null;
-        if (!chip) return;
-        chips.forEach((c) => c.classList.toggle('is-active', c === chip));
-        sortCourses(chip.dataset.sort || 'default');
-      });
-    }
+    wire(sortBar, 'sort');
   </script>
 </Layout>
 
@@ -514,6 +386,28 @@ const artFilters = artSet.map((a) => ({ key: a, label: a, icon: ART_ICON[a] ?? '
     background: transparent;
     border-color: var(--color-accent);
     color: var(--color-accent-soft);
+  }
+
+  /* フラット化した全講座グリッド */
+  #courseGrid { margin-top: 0.5rem; }
+  .course-card[hidden] { display: none; }
+  .course-head {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    flex-wrap: wrap;
+  }
+  .course-card.is-cert { border-left-color: var(--color-accent); }
+  .badge-cert {
+    background: var(--color-accent);
+    border-color: var(--color-accent);
+    color: #fff;
+    font-weight: 700;
+  }
+  .course-sub {
+    color: var(--color-primary-soft);
+    font-size: 0.88rem;
+    margin-top: 0.3rem;
   }
 
   /* 養成講座カード */
