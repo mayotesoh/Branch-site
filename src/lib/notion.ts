@@ -256,10 +256,15 @@ export interface Course {
   curriculum: string[];
   /** オンライン申込の対象か */
   payable: boolean;
-  /** 価格（円）。未設定は 0 */
+  /** 価格（円・税込）。Notionは税抜入力、ここで税込へ変換済み。未設定は 0 */
   memberPrice: number;
   nonMemberPrice: number;
 }
+
+// Notionには「税抜」価格を入力し、サイト表示・決済は「税込」に自動変換する。
+// 消費税10%、円未満は切り捨て（一般的な税込表示）。0は0のまま。
+const TAX_RATE = 0.1;
+const taxIncluded = (n: number): number => (n > 0 ? Math.floor(n * (1 + TAX_RATE)) : 0);
 
 let _courses: Promise<Course[]> | null = null;
 
@@ -330,8 +335,8 @@ export function getCourses(): Promise<Course[]> {
             order: p['表示順']?.number ?? 0,
             curriculum,
             payable: pCheckbox(p['決済対象']),
-            memberPrice: p['会員価格']?.number ?? 0,
-            nonMemberPrice: p['非会員価格']?.number ?? 0,
+            memberPrice: taxIncluded(p['会員価格']?.number ?? 0),
+            nonMemberPrice: taxIncluded(p['非会員価格']?.number ?? 0),
           } as Course;
         })
       );
