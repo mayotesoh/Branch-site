@@ -32,7 +32,7 @@ export const INSTAGRAM_URL = '';
 export const PAYJP_PUBLIC_KEY = 'pk_test_58c51cb25eec8a844a85bdf8';
 
 /** 公式LINE 友だち追加・予約・相談リンク */
-export const LINE_URL = 'https://lin.ee/SZZ4UJj';
+export const LINE_URL = 'https://lin.ee/8XHJSqJ';
 
 /** イベントのお問い合わせ窓口（会員以外・興味がある方の受付用LINE） */
 export const EVENT_INQUIRY_URL = 'https://lin.ee/RMBmLAy';
@@ -70,3 +70,11 @@ export const CONTENT_TYPES = [
   'キャリア相談',
   'その他',
 ];
+
+/**
+ * アクセス解析
+ * GA4の測定ID（G-から始まる）と、Search Consoleの確認コードを入れる。
+ * 空のままなら、タグは出力されない。
+ */
+export const GA_MEASUREMENT_ID = '';
+export const SEARCH_CONSOLE_VERIFICATION = '';
