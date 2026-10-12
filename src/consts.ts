@@ -35,7 +35,7 @@ export const PAYJP_PUBLIC_KEY = 'pk_test_58c51cb25eec8a844a85bdf8';
 export const LINE_URL = 'https://lin.ee/8XHJSqJ';
 
 /** イベントのお問い合わせ窓口（会員以外・興味がある方の受付用LINE） */
-export const EVENT_INQUIRY_URL = 'https://lin.ee/RMBmLAy';
+export const EVENT_INQUIRY_URL = 'https://lin.ee/8XHJSqJ';
 
 /**
  * YouTubeチャンネル（空文字ならリンク非表示）
