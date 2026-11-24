@@ -93,6 +93,19 @@ function doPost(e) {
       return handleMemberUpdateArts(data); // MemberPortal.gs
     }
 
+    // (N) 管理ポータル（運営・講師）: ログイン＋直近イベント一覧
+    if (data && data.action === 'admin_login') {
+      return handleAdminLogin(data); // AdminPortal.gs
+    }
+    // (O) 管理ポータル: 点呼名簿（イベントの会員出欠一覧）
+    if (data && data.action === 'admin_roster') {
+      return handleAdminRoster(data); // AdminPortal.gs
+    }
+    // (P) 管理ポータル: 出欠記録（出席/欠席/申込/クリア）
+    if (data && data.action === 'admin_mark') {
+      return handleAdminMark(data); // AdminPortal.gs
+    }
+
     // (A) フォーム / LIFF からの予約
     return handleFormReservation(data);
   } catch (err) {

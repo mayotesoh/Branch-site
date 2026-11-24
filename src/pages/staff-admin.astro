@@ -1,0 +1,307 @@
+---
+import Layout from '../layouts/Layout.astro';
+import { GAS_URL, LINE_URL } from '../consts';
+---
+
+<Layout
+  title="点呼・出欠管理｜Fortune Labo"
+  description="Fortune Labo 運営・講師むけの管理ページ。イベントの出欠点呼を記録できます。"
+>
+  <section class="section">
+    <div class="container narrow">
+      <h1 class="section-title">点呼・出欠管理</h1>
+      <p class="sub">運営・講師むけ。会員番号と暗証番号でログインしてください。</p>
+
+      <!-- ログイン -->
+      <div id="login" class="panel">
+        <form id="login-form" class="login-form" novalidate>
+          <label class="field">
+            <span class="field-label">会員番号</span>
+            <input id="memberNo" type="text" autocomplete="off" placeholder="例：BR-004" required />
+          </label>
+          <label class="field">
+            <span class="field-label">暗証番号（4桁）</span>
+            <input id="pin" type="password" inputmode="numeric" autocomplete="off"
+              maxlength="4" pattern="[0-9]*" placeholder="••••" required />
+          </label>
+          <button id="login-btn" type="submit" class="btn btn-primary btn-block">ログイン</button>
+          <p id="login-msg" class="msg" role="alert" aria-live="polite"></p>
+        </form>
+        <details class="login-help">
+          <summary>ログイン情報がわからない方はこちら</summary>
+          <div class="login-help-body">
+            <p>運営・講師のログイン情報は運営からご案内します。</p>
+            <a class="btn btn-ghost" href={LINE_URL} target="_blank" rel="noopener noreferrer">公式LINEで問い合わせる</a>
+          </div>
+        </details>
+      </div>
+
+      <!-- 管理ダッシュボード -->
+      <div id="dash" hidden>
+        <div class="dash-head">
+          <div>
+            <span id="who" class="who"></span>
+            <span id="role" class="role-badge"></span>
+          </div>
+          <button id="logout" type="button" class="btn btn-ghost btn-sm">ログアウト</button>
+        </div>
+
+        <div class="panel">
+          <label class="field">
+            <span class="field-label">イベントを選択</span>
+            <select id="eventSel" class="sel"></select>
+          </label>
+          <p id="evMeta" class="ev-meta"></p>
+        </div>
+
+        <div class="panel">
+          <div class="roster-top">
+            <input id="search" class="search" type="search" placeholder="名前・占い師名・会員番号で絞り込み" />
+            <div id="counts" class="counts"></div>
+          </div>
+          <p id="roster-msg" class="msg" aria-live="polite"></p>
+          <div id="roster" class="roster"></div>
+        </div>
+      </div>
+    </div>
+  </section>
+</Layout>
+
+<script define:vars={{ GAS_URL }} is:inline>
+  const $ = (id) => document.getElementById(id);
+  const loginBox = $('login'), dash = $('dash'), form = $('login-form');
+  const loginMsg = $('login-msg'), loginBtn = $('login-btn');
+  const esc = (s) => String(s == null ? '' : s).replace(/[&<>"']/g, (c) =>
+    ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
+
+  let creds = null;            // {no, pin}
+  let roster = [];             // 現在表示中の名簿
+  let currentEvent = null;     // {id,name,type,date}
+
+  async function postGas(payload) {
+    const res = await fetch(GAS_URL, {
+      method: 'POST',
+      headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+      body: JSON.stringify(payload),
+    });
+    return res.json();
+  }
+
+  const TYPE_ICON = {
+    '定例会': '📣', 'スキルアップ講座': '📚', 'リーディング会': '🔮',
+    'ロープレ': '🃏', 'マルシェ・イベント': '🎪', 'zoom解放日': '💻', 'ライブトーク': '🎙️',
+  };
+  function fmtDate(d) {
+    if (!d) return '';
+    const s = String(d).slice(0, 10).split('-');
+    if (s.length < 3) return String(d);
+    return `${Number(s[1])}/${Number(s[2])}`;
+  }
+
+  // ── ログイン ──
+  form.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const no = $('memberNo').value.trim();
+    const pin = $('pin').value.trim();
+    if (!no || !pin) { loginMsg.textContent = '会員番号と暗証番号を入力してください。'; return; }
+    loginBtn.disabled = true; loginBtn.textContent = '確認中…'; loginMsg.textContent = '';
+    try {
+      const d = await postGas({ action: 'admin_login', memberNo: no, pin });
+      if (d.status !== 'ok') { loginMsg.textContent = d.message || 'ログインできませんでした。'; loginBtn.disabled = false; loginBtn.textContent = 'ログイン'; return; }
+      creds = { no, pin };
+      $('who').textContent = (d.tellerName || d.name || '') + ' さん';
+      $('role').textContent = d.role || '';
+      loginBox.hidden = true; dash.hidden = false;
+      fillEvents(d.events || []);
+    } catch (err) {
+      loginMsg.textContent = '通信に失敗しました。時間をおいて再度お試しください。';
+      loginBtn.disabled = false; loginBtn.textContent = 'ログイン';
+    }
+  });
+
+  $('logout').addEventListener('click', () => {
+    creds = null; roster = []; currentEvent = null;
+    dash.hidden = true; loginBox.hidden = false;
+    loginBtn.disabled = false; loginBtn.textContent = 'ログイン';
+    $('pin').value = '';
+  });
+
+  // ── イベント選択 ──
+  function fillEvents(events) {
+    const sel = $('eventSel');
+    if (!events.length) { sel.innerHTML = '<option value="">（直近のイベントがありません）</option>'; $('roster').innerHTML = ''; return; }
+    sel.innerHTML = events.map((e) =>
+      `<option value="${esc(e.id)}">${esc(fmtDate(e.date))}　${esc((TYPE_ICON[e.type] || '') + ' ' + (e.name || e.type || 'イベント'))}</option>`
+    ).join('');
+    // 今日にいちばん近いイベントを初期選択
+    const today = new Date(); today.setHours(0, 0, 0, 0);
+    let best = 0, bestDiff = Infinity;
+    events.forEach((e, i) => {
+      if (!e.date) return;
+      const diff = Math.abs(new Date(String(e.date).slice(0, 10)).getTime() - today.getTime());
+      if (diff < bestDiff) { bestDiff = diff; best = i; }
+    });
+    sel.selectedIndex = best;
+    loadRoster(sel.value);
+  }
+  $('eventSel').addEventListener('change', (e) => loadRoster(e.target.value));
+
+  // ── 名簿読み込み ──
+  async function loadRoster(eventId) {
+    if (!eventId || !creds) return;
+    $('roster').innerHTML = '<p class="loading">読み込み中…</p>';
+    $('roster-msg').textContent = '';
+    try {
+      const d = await postGas({ action: 'admin_roster', memberNo: creds.no, pin: creds.pin, eventId });
+      if (d.status !== 'ok') { $('roster').innerHTML = ''; $('roster-msg').textContent = d.message || '名簿を取得できませんでした。'; return; }
+      currentEvent = d.event; roster = d.members || [];
+      renderMeta(d.event); renderRoster();
+    } catch (err) {
+      $('roster').innerHTML = ''; $('roster-msg').textContent = '通信に失敗しました。';
+    }
+  }
+
+  function renderMeta(ev) {
+    $('evMeta').textContent = ev ? `${fmtDate(ev.date)}　${(TYPE_ICON[ev.type] || '')} ${ev.name || ev.type || ''}` : '';
+  }
+  function renderCounts() {
+    const a = roster.filter((m) => m.status === '出席').length;
+    const ab = roster.filter((m) => m.status === '欠席').length;
+    const ap = roster.filter((m) => m.status === '申込').length;
+    $('counts').innerHTML =
+      `<span class="c c-on">出席 ${a}</span><span class="c c-off">欠席 ${ab}</span><span class="c c-up">申込 ${ap}</span><span class="c c-all">全 ${roster.length}</span>`;
+  }
+
+  function renderRoster() {
+    renderCounts();
+    const q = $('search').value.trim().toLowerCase();
+    const list = roster.filter((m) => !q ||
+      (m.name || '').toLowerCase().includes(q) ||
+      (m.tellerName || '').toLowerCase().includes(q) ||
+      (m.no || '').toLowerCase().includes(q));
+    if (!list.length) { $('roster').innerHTML = '<p class="loading">該当者がいません。</p>'; return; }
+    $('roster').innerHTML = list.map((m) => {
+      const label = esc(m.tellerName || m.name || m.no);
+      const subName = m.tellerName && m.name ? `<span class="r-sub">${esc(m.name)}</span>` : '';
+      const kb = m.kubun && m.kubun !== '会員' ? `<span class="r-kubun">${esc(m.kubun)}</span>` : '';
+      const st = m.status || '';
+      return `<div class="r" data-id="${esc(m.id)}">
+        <div class="r-info">
+          <span class="r-no">${esc(m.no)}</span>
+          <span class="r-name">${label}${kb}</span>${subName}
+        </div>
+        <div class="r-actions">
+          <button type="button" class="pill pill-on ${st === '出席' ? 'is-sel' : ''}" data-st="出席">出席</button>
+          <button type="button" class="pill pill-off ${st === '欠席' ? 'is-sel' : ''}" data-st="欠席">欠席</button>
+          <button type="button" class="pill pill-clear ${st === '' ? 'is-sel' : ''}" data-st="">—</button>
+        </div>
+      </div>`;
+    }).join('');
+  }
+
+  $('search').addEventListener('input', renderRoster);
+
+  // 出欠ボタン（委譲）
+  $('roster').addEventListener('click', async (e) => {
+    const btn = e.target.closest('.pill');
+    if (!btn || !currentEvent) return;
+    const row = btn.closest('.r');
+    const id = row.getAttribute('data-id');
+    const status = btn.getAttribute('data-st');
+    const m = roster.find((x) => x.id === id);
+    if (!m) return;
+    const prev = m.status;
+    if (prev === status) return;
+    // 楽観的更新
+    m.status = status;
+    row.querySelectorAll('.pill').forEach((b) => b.classList.toggle('is-sel', b.getAttribute('data-st') === status));
+    renderCounts();
+    row.classList.add('saving');
+    try {
+      const d = await postGas({ action: 'admin_mark', memberNo: creds.no, pin: creds.pin, eventId: currentEvent.id, targetId: id, status });
+      if (d.status !== 'ok') throw new Error(d.message || '記録できませんでした');
+      $('roster-msg').textContent = `${m.tellerName || m.name}：${status || '取消'} を記録しました`;
+    } catch (err) {
+      m.status = prev; // ロールバック
+      row.querySelectorAll('.pill').forEach((b) => b.classList.toggle('is-sel', b.getAttribute('data-st') === prev));
+      renderCounts();
+      $('roster-msg').textContent = (err && err.message) ? err.message : '通信に失敗しました。';
+    } finally {
+      row.classList.remove('saving');
+    }
+  });
+</script>
+
+<style>
+  .narrow { max-width: 760px; }
+  .sub { color: var(--color-text-muted); margin-bottom: 1.2rem; font-size: 0.92rem; }
+  .panel {
+    background: var(--color-bg-soft); border: 1px solid var(--color-border);
+    border-radius: 14px; padding: 1.2rem; margin-bottom: 1.1rem;
+  }
+  .field { display: block; margin-bottom: 0.9rem; }
+  .field-label { display: block; font-size: 0.85rem; color: var(--color-text-muted); margin-bottom: 0.35rem; }
+  .field input, .sel, .search {
+    width: 100%; padding: 0.6rem 0.75rem; border-radius: 10px;
+    border: 1px solid var(--color-border); background: var(--color-bg); color: var(--color-text);
+    font-size: 1rem;
+  }
+  .btn-block { width: 100%; }
+  .btn-sm { padding: 0.35rem 0.8rem; font-size: 0.85rem; }
+  .msg { margin-top: 0.6rem; font-size: 0.88rem; color: var(--color-primary-soft); min-height: 1.2em; }
+
+  .login-help { margin-top: 1rem; font-size: 0.88rem; }
+  .login-help summary { cursor: pointer; color: var(--color-text-muted); }
+  .login-help-body { margin-top: 0.7rem; display: flex; flex-direction: column; gap: 0.6rem; }
+
+  .dash-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 1rem; gap: 0.6rem; }
+  .who { font-weight: 700; }
+  .role-badge {
+    display: inline-block; margin-left: 0.5rem; padding: 0.15rem 0.6rem; border-radius: 999px;
+    background: var(--color-primary); color: #fff; font-size: 0.75rem; font-weight: 700;
+  }
+  .ev-meta { margin: 0.4rem 0 0; color: var(--color-text-muted); font-size: 0.9rem; }
+
+  .roster-top { display: flex; flex-direction: column; gap: 0.6rem; margin-bottom: 0.6rem; }
+  .counts { display: flex; flex-wrap: wrap; gap: 0.4rem; }
+  .counts .c { font-size: 0.8rem; padding: 0.2rem 0.6rem; border-radius: 999px; border: 1px solid var(--color-border); }
+  .c-on { color: #1a7f46; border-color: #1a7f46; }
+  .c-off { color: #b23b3b; border-color: #b23b3b; }
+  .c-up { color: #9a7a00; border-color: #caa73a; }
+  .c-all { color: var(--color-text-muted); }
+
+  .roster { display: flex; flex-direction: column; gap: 0.5rem; }
+  .loading { color: var(--color-text-muted); font-size: 0.9rem; padding: 0.4rem 0; }
+  .r {
+    display: flex; align-items: center; justify-content: space-between; gap: 0.6rem;
+    padding: 0.55rem 0.7rem; border: 1px solid var(--color-border); border-radius: 12px; background: var(--color-bg);
+    flex-wrap: wrap;
+  }
+  .r.saving { opacity: 0.6; }
+  .r-info { display: flex; align-items: baseline; gap: 0.5rem; flex-wrap: wrap; min-width: 0; }
+  .r-no { font-size: 0.72rem; color: var(--color-text-muted); font-variant-numeric: tabular-nums; }
+  .r-name { font-weight: 700; }
+  .r-kubun {
+    margin-left: 0.4rem; font-size: 0.68rem; padding: 0.08rem 0.45rem; border-radius: 999px;
+    background: var(--color-primary-soft); color: #fff; font-weight: 700; vertical-align: middle;
+  }
+  .r-sub { font-size: 0.8rem; color: var(--color-text-muted); }
+  .r-actions { display: flex; gap: 0.35rem; flex-shrink: 0; }
+  .pill {
+    padding: 0.32rem 0.7rem; border-radius: 999px; border: 1px solid var(--color-border);
+    background: var(--color-bg); color: var(--color-text-muted); font-size: 0.82rem; font-weight: 700;
+    cursor: pointer; transition: background 0.12s, color 0.12s, border-color 0.12s;
+  }
+  .pill-clear { padding: 0.32rem 0.6rem; }
+  .pill-on.is-sel { background: #1a7f46; border-color: #1a7f46; color: #fff; }
+  .pill-off.is-sel { background: #b23b3b; border-color: #b23b3b; color: #fff; }
+  .pill-clear.is-sel { background: var(--color-text-muted); border-color: var(--color-text-muted); color: #fff; }
+  .pill:hover { border-color: var(--color-primary); color: var(--color-primary); }
+  .pill.is-sel:hover { color: #fff; }
+
+  @media (max-width: 480px) {
+    .r { flex-direction: column; align-items: stretch; }
+    .r-actions { justify-content: space-between; }
+    .pill { flex: 1; text-align: center; }
+  }
+</style>
